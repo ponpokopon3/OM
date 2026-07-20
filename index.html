@@ -1,0 +1,1490 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Profile Viewer</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap">
+    <style>
+      html,body{height:100%;}
+      body{font-family: 'Roboto', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;}
+      .card-base{transition: box-shadow .18s ease, transform .12s ease;}
+      .card-base:hover{transform: translateY(-4px);}
+      .markdown-content h1, .markdown-content h2, .markdown-content h3{font-weight:500;margin-top:0.75rem;margin-bottom:0.5rem;color:#202124}
+      .markdown-content p{color:#3c4043;line-height:1.5}
+      .markdown-content ul{padding-left:1.2rem;margin-top:0.25rem}
+      .markdown-content table{width:100%;border-collapse:collapse;margin-top:0.5rem}
+      .markdown-content th, .markdown-content td{border:1px solid #e0e0e0;padding:0.45rem;text-align:left}
+      .markdown-content th{background:#f8f9fa}
+      .markdown-content td{font-size:0.95rem}
+      /* 履歴書スタイル */
+      #resume-content{font-size:1.5rem}
+      #resume-content h1{font-size:1.8rem;font-weight:bold;margin-top:0;margin-bottom:1rem;color:#1a1a1a;border-bottom:3px solid #2563eb;padding-bottom:0.5rem}
+      #resume-content h2{font-size:1.2rem;font-weight:bold;margin-top:1.5rem;margin-bottom:0.75rem;color:#1a1a1a;border-left:4px solid #2563eb;padding-left:0.75rem}
+      #resume-content h3{font-size:1rem;font-weight:600;margin-top:1rem;margin-bottom:0.5rem;color:#374151}
+      #resume-content p{margin-top:0.25rem;margin-bottom:0.25rem;color:#4b5563}
+      #resume-content ul{margin-top:0.5rem;margin-bottom:0.5rem}
+      #resume-content li{margin-left:1.5rem;color:#4b5563;line-height:1.6}
+      .mbti-map{position:relative;height:620px;background:#fff;border:1px solid #e5e7eb;border-radius:16px;overflow:hidden;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+      .mbti-map::before{content:'';position:absolute;left:50%;top:0;bottom:0;border-left:2px solid #d1d5db}
+      .mbti-map::after{content:'';position:absolute;top:50%;left:0;right:0;border-top:2px solid #d1d5db}
+      .mbti-dot{position:absolute;transform:translate(-50%,-50%);min-width:118px;max-width:150px;text-align:center;white-space:normal;line-height:1.1}
+      .mbti-dot .pin{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:9999px;background:#2563eb;border:3px solid #dbeafe;box-shadow:0 1px 6px rgba(37,99,235,.35)}
+
+      .mbti3d-panel{background:#fff;border:1px solid #e5e7eb;border-radius:16px;box-shadow:0 1px 2px rgba(0,0,0,.04);overflow:hidden}
+      .mbti3d-stage{position:relative;height:720px;perspective:1250px;background:linear-gradient(180deg,#f8fafc 0%,#ffffff 100%);overflow:hidden;touch-action:none}
+      .mbti3d-scene{position:absolute;left:50%;top:53%;width:440px;height:440px;transform-style:preserve-3d;transition:transform .2s ease}
+      .mbti3d-cube{position:absolute;left:0;top:0;width:440px;height:440px;transform-style:preserve-3d;transform:translate(-50%,-50%)}
+      .mbti3d-plane{position:absolute;left:50%;top:50%;width:440px;height:440px;border:1px solid rgba(148,163,184,.35);background:rgba(255,255,255,.18);transform-style:preserve-3d}
+      .mbti3d-plane.xy{transform:translate(-50%,-50%) translateZ(0)}
+      .mbti3d-plane.xz{transform:translate(-50%,-50%) rotateX(90deg)}
+      .mbti3d-plane.yz{transform:translate(-50%,-50%) rotateY(90deg)}
+      .mbti3d-axis{position:absolute;left:50%;top:50%;transform-style:preserve-3d;background:#94a3b8;opacity:.8}
+      .mbti3d-axis.x{width:440px;height:2px;transform:translate(-50%,-50%) translateZ(0)}
+      .mbti3d-axis.y{width:2px;height:440px;transform:translate(-50%,-50%) translateZ(0)}
+      .mbti3d-axis.z{width:2px;height:440px;transform:translate(-50%,-50%) rotateX(90deg)}
+      .mbti3d-point{position:absolute;left:50%;top:50%;transform-style:preserve-3d;min-width:128px;text-align:center;line-height:1.1}
+      .mbti3d-point .ball{display:inline-flex;width:18px;height:18px;border-radius:9999px;border:3px solid #dbeafe;background:#2563eb;box-shadow:0 2px 10px rgba(37,99,235,.35)}
+      .mbti3d-point.extrovert .ball{border-color:#fee2e2;background:#dc2626;box-shadow:0 2px 10px rgba(220,38,38,.3)}
+      .mbti3d-label{margin-top:.25rem;border:1px solid #e5e7eb;border-radius:.75rem;background:rgba(255,255,255,.96);box-shadow:0 1px 6px rgba(15,23,42,.12);padding:.35rem .5rem;font-size:.75rem}
+      .mbti3d-corner-label{position:absolute;font-size:.75rem;font-weight:700;background:rgba(255,255,255,.9);border-radius:9999px;padding:.18rem .5rem;box-shadow:0 1px 4px rgba(15,23,42,.08)}
+      .mbti3d-axis-end-label{position:absolute;left:50%;top:50%;font-size:.75rem;font-weight:700;background:rgba(255,255,255,.92);border-radius:9999px;padding:.2rem .55rem;white-space:nowrap;box-shadow:0 1px 4px rgba(15,23,42,.08)}
+      .mbti3d-axis-label-x{color:#7c3aed;border:1px solid #c4b5fd}
+      .mbti3d-axis-label-y{color:#059669;border:1px solid #a7f3d0}
+      .mbti3d-axis-label-z{color:#d97706;border:1px solid #fde68a}
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@2.4.0/dist/purify.min.js"></script>
+</head>
+<body>
+    <div id="app" class="min-h-screen bg-gray-50 text-gray-900 p-6">
+    <div class="w-full mx-auto" style="transform: scale(0.8); transform-origin: top left; width: calc(100% / 0.8);">
+      <div class="w-full flex items-start justify-between mb-4 px-2">
+        <div>
+          <h1 class="text-3xl font-medium text-gray-800">Profile Viewer</h1>
+          <p class="mt-1 text-sm text-gray-600">チームメンバーのプロフィールを簡潔に表示します</p>
+        </div>
+        <div class="text-sm text-gray-500 self-start">最終更新: {{ lastUpdated }}</div>
+      </div>
+      <div class="w-full flex gap-6">
+      <aside class="w-56 hidden md:block">
+        <div class="sticky top-6">
+          <nav class="bg-white rounded-lg p-3 shadow-sm space-y-1">
+            <a href="#organization" @click.prevent="scrollToOrg" class="block px-2 py-2 rounded hover:bg-gray-100">組織表示</a>
+            <a href="#projects" @click.prevent="scrollToProjects" class="block px-2 py-2 rounded hover:bg-gray-100">プロジェクト表示</a>
+            <a href="#companies" @click.prevent="scrollToCompanies" class="block px-2 py-2 rounded hover:bg-gray-100">会社表示</a>
+            <a href="#mbti3d" @click.prevent="scrollToMbti3d" class="block px-2 py-2 rounded hover:bg-gray-100">MBTIマッピング</a>
+          </nav>
+        </div>
+      </aside>
+      <div class="flex-1">
+      <main class="mt-4">
+        <div v-if="error" class="text-red-600 mt-2">{{ error }}</div>
+        <div v-if="members.length===0" class="mt-4 text-gray-600">メンバーが見つかりません。</div>
+
+        <section v-if="members.length > 0" class="sticky top-4 z-30 mb-4 rounded-xl border border-gray-200 bg-white/95 p-4 shadow-sm backdrop-blur">
+          <div class="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
+            <div class="grid flex-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <label class="block text-xs font-semibold text-gray-600">名前・ID・ロール検索
+                <input v-model.trim="searchQuery" type="search" placeholder="例: 山田 / PM / INTJ" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none">
+              </label>
+              <label class="block text-xs font-semibold text-gray-600">会社
+                <select v-model="filterCompany" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none">
+                  <option value="">すべて</option>
+                  <option v-for="name in companyOptions" :key="name" :value="name">{{ name }}</option>
+                </select>
+              </label>
+              <label class="block text-xs font-semibold text-gray-600">配属
+                <select v-model="filterAssignment" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none">
+                  <option value="">すべて</option>
+                  <option v-for="name in assignmentOptions" :key="name" :value="name">{{ name }}</option>
+                </select>
+              </label>
+              <label class="block text-xs font-semibold text-gray-600">プロジェクト
+                <select v-model="filterProject" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none">
+                  <option value="">すべて</option>
+                  <option v-for="name in projectOptions" :key="name" :value="name">{{ name }}</option>
+                </select>
+              </label>
+            </div>
+            <div class="flex flex-wrap items-center gap-2 text-sm">
+              <span class="text-gray-500">表示 {{ filteredMembers.length }} / {{ members.length }} 名</span>
+              <div class="inline-flex rounded-lg border border-gray-300 bg-gray-50 p-1">
+                <button @click="densityMode='standard'" :class="densityMode === 'standard' ? 'bg-white shadow-sm text-blue-700' : 'text-gray-600'" class="rounded-md px-3 py-1.5">標準</button>
+                <button @click="densityMode='compact'" :class="densityMode === 'compact' ? 'bg-white shadow-sm text-blue-700' : 'text-gray-600'" class="rounded-md px-3 py-1.5">コンパクト</button>
+              </div>
+              <button @click="resetFilters" class="rounded-lg border border-gray-300 px-3 py-1.5 text-gray-600 hover:bg-gray-50">解除</button>
+            </div>
+          </div>
+        </section>
+
+        <div v-if="currentView === 'organization'" id="organization" class="mt-4">
+          <div>
+            <member-node v-for="node in visibleRoots" :key="node._id || node.id" :node="node" :level="0" :helpers="helpers" :current-view="currentView" :density-mode="densityMode"></member-node>
+          </div>
+        </div>
+
+        <div v-if="currentView === 'projects'" id="projects" class="mt-8">
+          <h2 class="text-xl font-medium text-gray-800 mb-3">プロジェクト一覧</h2>
+          <div class="grid gap-3 sm:grid-cols-3">
+            <div v-for="p in visibleProjects" :key="p.name" class="bg-white rounded-lg p-4 shadow-sm">
+              <div class="flex items-baseline justify-between">
+                    <div class="flex items-center gap-3">
+                      <button @click="p.expanded = !p.expanded" class="text-sm text-gray-500 transition-transform transform" :style="{ transform: p.expanded ? 'rotate(90deg)' : 'rotate(0deg)' }">▶</button>
+                      <div class="text-lg font-semibold">{{ p.name }}</div>
+                    </div>
+                    <div class="text-sm text-gray-500">
+                      <div>メンバー {{ projectMemberCount(p) }}</div>
+                      <div v-if="projectTotalEffort(p)" class="mt-0.5">工数合計 {{ projectTotalEffort(p) }}</div>
+                    </div>
+                  </div>
+                  <div v-if="p.expanded" class="mt-2 text-sm text-gray-700">
+                    <div class="space-y-3">
+                      <member-node v-for="root in p.roots" :key="root._id" :node="root" :level="0" :helpers="helpers" :current-view="currentView" :density-mode="densityMode"></member-node>
+                    </div>
+                  </div>
+            </div>
+          </div>
+        </div>
+        
+        <div v-if="currentView === 'company'" id="companies" class="mt-8">
+          <h2 class="text-xl font-medium text-gray-800 mb-3">会社一覧</h2>
+          <div class="grid gap-3 sm:grid-cols-3">
+            <div v-for="c in visibleCompanies" :key="c.name" class="bg-white rounded-lg p-4 shadow-sm">
+              <div class="flex items-baseline justify-between">
+                <div class="flex items-center gap-3">
+                  <button @click="c.expanded = !c.expanded" class="text-sm text-gray-500 transition-transform transform" :style="{ transform: c.expanded ? 'rotate(90deg)' : 'rotate(0deg)' }">▶</button>
+                  <div class="text-lg font-semibold">{{ c.name }}</div>
+                </div>
+                <div class="text-sm text-gray-500">メンバー {{ projectMemberCount(c) }}</div>
+              </div>
+              <div v-if="c.expanded" class="mt-2 text-sm text-gray-700">
+                <div class="space-y-3">
+                  <member-node v-for="root in c.roots" :key="root._id" :node="root" :level="0" :helpers="helpers" :current-view="currentView" :density-mode="densityMode"></member-node>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div v-if="currentView === 'mbti3d'" id="mbti3d" class="mt-8">
+          <div class="flex items-end justify-between mb-3">
+            <div>
+              <h2 class="text-xl font-medium text-gray-800">MBTIマッピング</h2>
+              <p class="mt-1 text-sm text-gray-600">X軸=柔軟・探索 ↔ 計画・段取り、Y軸=抽象・可能性 ↔ 具体・実践、Z軸=共感・価値観 ↔ 論理・分析で立体配置します。色はI/Eで表示します。視点はスクロールではなく、下のボタンまたはスライダーで調整できます。</p>
+            </div>
+            <div class="text-sm text-gray-500">入力済み {{ mbti3dPlotMembers.length }} / {{ filteredMembers.length }}</div>
+          </div>
+
+          <div v-if="mbtiUnmappedMembers.length > 0" class="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+            <div class="font-semibold">MBTIマッピング未表示メンバー: {{ mbtiUnmappedMembers.length }}名</div>
+            <div class="mt-1">
+              <span v-for="m in mbtiUnmappedMembers.slice(0, 12)" :key="m.name" class="inline-block mr-3">{{ m.name }}（{{ m.reason }}<template v-if="m.raw">: {{ m.raw }}</template>）</span>
+              <span v-if="mbtiUnmappedMembers.length > 12">ほか {{ mbtiUnmappedMembers.length - 12 }}名</span>
+            </div>
+          </div>
+
+          <div class="mbti3d-panel">
+            <div class="grid gap-4 p-4 lg:grid-cols-4 text-sm text-gray-700 border-b border-gray-100">
+              <div>
+                <div class="font-semibold mb-2">視点ボタン</div>
+                <div class="grid grid-cols-3 gap-1 w-40">
+                  <span></span>
+                  <button @click="rotateMbti3d(-10, 0)" class="px-2 py-1 rounded bg-gray-100 hover:bg-gray-200">↑</button>
+                  <span></span>
+                  <button @click="rotateMbti3d(0, -15)" class="px-2 py-1 rounded bg-gray-100 hover:bg-gray-200">←</button>
+                  <button @click="resetMbti3dView" class="px-2 py-1 rounded bg-gray-100 hover:bg-gray-200">戻す</button>
+                  <button @click="rotateMbti3d(0, 15)" class="px-2 py-1 rounded bg-gray-100 hover:bg-gray-200">→</button>
+                  <span></span>
+                  <button @click="rotateMbti3d(10, 0)" class="px-2 py-1 rounded bg-gray-100 hover:bg-gray-200">↓</button>
+                  <span></span>
+                </div>
+              </div>
+              <div>
+                <div class="font-semibold mb-2">プリセット</div>
+                <div class="flex flex-wrap gap-2">
+                  <button @click="setMbti3dView(-24, 38)" class="px-3 py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200">斜め</button>
+                  <button @click="setMbti3dView(0, 0)" class="px-3 py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200">正面</button>
+                  <button @click="setMbti3dView(65, 35)" class="px-3 py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200">上から</button>
+                </div>
+              </div>
+              <label class="block">上下回転 X: {{ mbti3dRotX }}°
+                <input type="range" min="-75" max="75" v-model.number="mbti3dRotX" class="w-full">
+              </label>
+              <div>
+                <label class="block">左右回転 Y: {{ mbti3dRotY }}°
+                  <input type="range" min="-180" max="180" v-model.number="mbti3dRotY" class="w-full">
+                </label>
+                <div class="mt-2 flex flex-wrap items-center gap-2 text-xs">
+                  <span class="inline-flex items-center gap-1"><span class="inline-block w-3 h-3 rounded-full bg-blue-600"></span>内向的（I）</span>
+                  <span class="inline-flex items-center gap-1"><span class="inline-block w-3 h-3 rounded-full bg-red-600"></span>外交的（E）</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="mbti3d-stage">
+              <div class="absolute left-4 top-4 z-10 rounded-lg bg-white/90 border border-gray-200 p-3 text-xs text-gray-600 shadow-sm">
+                <div><strong>X:</strong> 柔軟・探索（P） ←→ 計画・段取り（J）</div>
+                <div><strong>Y:</strong> 抽象・可能性（N） ←→ 具体・実践（S）</div>
+                <div><strong>Z:</strong> 共感・価値観（F） ←→ 論理・分析（T）</div>
+                <div><strong>色:</strong> 内向的（I）=青 / 外交的（E）=赤</div>
+              </div>
+
+              <div class="mbti3d-scene" :style="{ transform: 'rotateX(' + mbti3dRotX + 'deg) rotateY(' + mbti3dRotY + 'deg)' }">
+                <div class="mbti3d-cube">
+                  <div class="mbti3d-plane xy"></div>
+                  <div class="mbti3d-plane xz"></div>
+                  <div class="mbti3d-plane yz"></div>
+                  <div class="mbti3d-axis x"></div>
+                  <div class="mbti3d-axis y"></div>
+                  <div class="mbti3d-axis z"></div>
+
+                  <div class="mbti3d-axis-end-label mbti3d-axis-label-x" style="transform:translate3d(-238px,0,0) translate(-50%,-50%);">柔軟・探索（P）</div>
+                  <div class="mbti3d-axis-end-label mbti3d-axis-label-x" style="transform:translate3d(238px,0,0) translate(-50%,-50%);">計画・段取り（J）</div>
+                  <div class="mbti3d-axis-end-label mbti3d-axis-label-y" style="transform:translate3d(0,-238px,0) translate(-50%,-50%);">抽象・可能性（N）</div>
+                  <div class="mbti3d-axis-end-label mbti3d-axis-label-y" style="transform:translate3d(0,238px,0) translate(-50%,-50%);">具体・実践（S）</div>
+                  <div class="mbti3d-corner-label mbti3d-axis-label-z" style="left:42px;top:-10px;transform:translateZ(176px);">論理・分析（T）</div>
+                  <div class="mbti3d-corner-label mbti3d-axis-label-z" style="left:42px;top:82px;transform:translateZ(-176px);">共感・価値観（F）</div>
+
+                  <div v-for="p in mbti3dPlotMembers" :key="p.id" class="mbti3d-point" :class="{ extrovert: p.ei === 'E' }" :style="{ transform: 'translate3d(' + p.x + 'px,' + p.y + 'px,' + p.z + 'px)' }" :title="p.name + '（' + p.mbti + '）'">
+                    <div class="ball"></div>
+                    <div class="mbti3d-label">
+                      <div class="font-semibold text-gray-800 truncate">{{ p.name }}</div>
+                      <div class="text-gray-500">{{ p.mbti }}</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div v-if="mbti3dPlotMembers.length === 0" class="absolute inset-0 flex items-center justify-center text-gray-500">
+                プロフィールの「## MBTI」に 16タイプを入力すると、ここに表示されます。
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div v-if="selectedHtml" class="fixed inset-0 z-50 flex items-center justify-center">
+          <div class="absolute inset-0 bg-black/50" @click="selectedHtml=''" aria-hidden="true"></div>
+          <div class="relative bg-white max-w-6xl w-full mx-4 rounded-lg shadow-2xl p-8 z-10" style="max-width:90vw; max-height:90vh; overflow:auto;">
+            <button @click="selectedHtml=''" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-2xl">✕</button>
+            
+            <!-- 履歴書形式コンテンツ -->
+            <div id="resume-content" class="prose prose-sm max-w-none">
+              <div class="markdown-content" v-html="selectedHtml"></div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+    </div>
+
+  <script>
+  // -----------------------------------------
+  // CONFIG: 定数と設定値
+  // -----------------------------------------
+  const CONFIG = {
+    BASE_CANDIDATES: ['./Profile/'],
+    INVALID_SUPERVISOR_VALUES: ['', '-', 'なし', '無し', 'n/a', 'null', 'undefined'],
+    SECTION_NAMES: {
+      FIRST_NAME: '名前（名）',
+      LAST_NAME: '名前（姓）',
+      NAME: '名前',
+      PUBLIC_ID: '公開ID',
+      ID: 'id',
+      ASSIGNMENT_SUPERIOR: '配属上位者',
+      ASSIGNMENT_SUPERVISOR: '配属上司',
+      COMPANY: '会社',
+      COMPANY_SUPERVISOR: '会社上司',
+      COMPANY_ROLE: '会社ロール',
+      COMPANY_ROLE_NAME: '会社ロール名',
+      ASSIGNMENT: '配属',
+      ASSIGNMENT_ROLE: '配属ロール',
+      ASSIGNMENT_ROLE_NAME: '配属ロール名',
+      ASSIGNMENT_DATE: '配属日',
+      START_DATE: '入社日',
+      SUPERVISOR_PUBLIC_ID: '上司公開ID',
+      SUPERVISOR: '上司',
+      PHOTO: '写真',
+      PROJECT: 'プロジェクト',
+      PROJECT_SUPERIOR: 'プロジェクト上位者',
+      MBTI: 'MBTI',
+    }
+  };
+
+  const { createApp, ref, computed, onMounted } = Vue;
+
+  // -----------------------------------------
+  // ファイル読み込み関連
+  // -----------------------------------------
+  async function fetchText(url){
+    const res = await fetch(url);
+    if(!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+    return res.text();
+  }
+
+  async function tryManifest(base){
+    try{
+      const res = await fetch(`${base}index.json?t=${Date.now()}`);
+      if(!res.ok) return null;
+      const m = await res.json();
+      let list = [];
+      if(Array.isArray(m)) list = m;
+      else if(typeof m === 'string') list = [m];
+      else if(m && typeof m === 'object'){
+        if(Array.isArray(m.files)) list = m.files;
+        else list = Object.values(m).flatMap(v => Array.isArray(v) ? v : [v]);
+      }
+      return Array.from(new Set(list.map(String).filter(s=>/\.(md|markdown)$/i.test(s))));
+    }catch(e){ return null }
+  }
+
+  async function tryDirectoryListing(base){
+    try{
+      const html = await fetchText(base);
+      const doc = new DOMParser().parseFromString(html, 'text/html');
+      const hrefs = Array.from(doc.querySelectorAll('a')).map(a=>a.getAttribute('href')).filter(Boolean);
+      const files = hrefs
+        .map(h => decodeURIComponent(String(h)))
+        .map(h => h.replace(/\\/g,'/').split('/').filter(Boolean).pop())
+        .filter(Boolean)
+        .filter(f => /\.(md|markdown)$/i.test(f));
+      return Array.from(new Set(files));
+    }catch(e){ return null }
+  }
+
+  // -----------------------------------------
+  // ユーティリティ関数
+  // -----------------------------------------
+  function escapeHtml(s){
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  // セクション値を取得（複数の候補キーに対応）
+  function getFirstSection(entry, sectionNames){
+    if(!entry || !entry.data || !entry.data.sections) return '';
+    for(const name of sectionNames){
+      const v = entry.data.sections[name];
+      if(!v) continue;
+      if(Array.isArray(v)){
+        const first = v[0];
+        return typeof first === 'string' ? first : (first && first.text ? first.text : '');
+      }
+      if(typeof v === 'string') return v;
+    }
+    return '';
+  }
+
+  // セクション値を取得（単一キーで十分な場合）
+  function getSectionValue(entry, sectionName){
+    return getFirstSection(entry, [sectionName]);
+  }
+
+  // 上司ID を取得（複数の候補セクション名から最初の有効な値を返す）
+  function extractSupervisorId(entry, sectionNames){
+    const candidates = sectionNames
+      .map(name => getSectionValue(entry, name))
+      .filter(Boolean)
+      .map(v => String(v).trim());
+    
+    for(const cand of candidates){
+      if(isValidSupervisorId(cand)) return cand;
+    }
+    return '';
+  }
+
+  // 上司ID が有効かどうか判定
+  function isValidSupervisorId(supId){
+    if(!supId) return false;
+    const lowId = String(supId).toLowerCase();
+    return !CONFIG.INVALID_SUPERVISOR_VALUES.includes(lowId);
+  }
+
+  // Markdown を解析して構造化データを返す
+  function parseMarkdownToData(text){
+    // HTMLコメント（単一行・複数行）を除去
+    const cleanText = text.replace(/<!--[\s\S]*?-->/g, '');
+    const lines = cleanText.split(/\r?\n/);
+    const meta = {};
+    let i = 0;
+    
+    // フロントマター解析
+    if(lines[0] === '---'){
+      i = 1;
+      while(i < lines.length && lines[i] !== '---'){
+        const m = lines[i].match(/^([^:]+):\s*(.*)$/);
+        if(m) meta[m[1].trim()] = m[2].trim();
+        i++;
+      }
+      if(i < lines.length && lines[i] === '---') i++;
+    }
+
+    // セクション（## 見出し）ごとに行を収集
+    const sectionsRaw = {};
+    let current = null;
+    for(; i < lines.length; i++){
+      const line = lines[i];
+      const h = line.match(/^##\s+(.*)$/);
+      if(h){
+        current = h[1].trim();
+        sectionsRaw[current] = [];
+        continue;
+      }
+      if(current){
+        sectionsRaw[current].push(line);
+      }
+    }
+
+    // セクション内容を解析
+    const sections = {};
+    for(const k of Object.keys(sectionsRaw)){
+      sections[k] = parseSection(sectionsRaw[k]);
+    }
+
+    // 表示名を決定
+    const name = determineName(meta, sections);
+
+    return { meta, name, sections };
+  }
+
+  // セクション内容をプレーンテキストまたはネストリストに変換
+  function parseSection(lines){
+    const text = lines.join('\n').trim();
+    if(!text) return '';
+
+    // Markdown テーブルを検出
+    const idxHeader = lines.findIndex((ln,i) => /^\|.*\|/.test(ln) && i+1 < lines.length && /^\|[-:\s|]+\|$/.test(lines[i+1]));
+    if(idxHeader !== -1){
+      return parseTable(lines, idxHeader);
+    }
+
+    // リスト形式を検出
+    const hasList = lines.some(l => /^\s*[-*]\s+/.test(l));
+    if(!hasList) return text;
+
+    return parseNestedList(lines);
+  }
+
+  // テーブルを解析
+  function parseTable(lines, headerIndex){
+    const hdrLine = lines[headerIndex];
+    const headers = hdrLine.split('|').map(s=>s.trim()).filter(s=>s.length);
+    const rows = [];
+    
+    for(let r = headerIndex+2; r < lines.length; r++){
+      const rowLine = lines[r];
+      if(!/^\|.*\|/.test(rowLine)) break;
+      const cols = rowLine.split('|').map(s=>s.trim()).filter((_,i,arr)=> i>0 || arr.length>1).filter((s,i)=> s!== '');
+      
+      const obj = {};
+      for(let j=0;j<headers.length;j++){
+        obj[headers[j]] = cols[j] !== undefined ? cols[j] : '';
+      }
+      rows.push(obj);
+    }
+    return rows;
+  }
+
+  // ネストされたリストを解析
+  function parseNestedList(lines){
+    const stack = [{ indent: -1, children: [] }];
+    
+    for(const raw of lines){
+      const m = raw.match(/^(\s*)[-*]\s+(.*)$/);
+      if(!m) continue;
+      
+      const indent = m[1].length;
+      const txt = m[2].trim();
+      const node = { text: txt, children: [] };
+      
+      while(indent <= stack[stack.length - 1].indent) stack.pop();
+      stack[stack.length - 1].children.push(node);
+      stack.push({ indent, children: node.children });
+    }
+
+    function simplify(nodes){
+      return nodes.map(n => n.children && n.children.length ? { text: n.text, children: simplify(n.children) } : n.text);
+    }
+    return simplify(stack[0].children);
+  }
+
+  // 表示名を決定
+  function determineName(meta, sections){
+    if(meta['name']) return meta['name'];
+    
+    const lastName = getFirstSection({ data: { sections } }, [CONFIG.SECTION_NAMES.LAST_NAME]);
+    const firstName = getFirstSection({ data: { sections } }, [CONFIG.SECTION_NAMES.FIRST_NAME]);
+    if(lastName && firstName) return `${lastName} ${firstName}`.trim();
+    
+    for(const v of Object.values(sections)){
+      if(typeof v === 'string' && v) return v;
+      if(Array.isArray(v) && v.length){
+        return typeof v[0] === 'string' ? v[0] : (v[0] && v[0].text ? v[0].text : '');
+      }
+    }
+    return '';
+  }
+
+  // -----------------------------------------
+  // 階層構築の共通ロジック
+  // -----------------------------------------
+  function buildHierarchyFromMembers(memberList, getSupervisorIdFunc){
+    const map = {};
+    const rootsLocal = [];
+
+    // ID をキーに map を構築
+    for(const m of memberList){
+      const id = getPublicId(m);
+      m._id = id;
+      map[id] = m;
+    }
+
+    // 上司関係でリンク
+    for(const m of memberList){
+      const supId = getSupervisorIdFunc(m);
+      
+      if(supId && map[supId] && supId !== m._id){
+        if(!map[supId].children) map[supId].children = [];
+        map[supId].children.push(m);
+      } else {
+        rootsLocal.push(m);
+      }
+    }
+
+    return rootsLocal;
+  }
+
+  // メンバーの公開 ID を取得
+  function getPublicId(entry){
+    if(entry && entry.data && entry.data.meta){
+      if(entry.data.meta['公開ID']) return String(entry.data.meta['公開ID']).trim();
+      if(entry.data.meta['id']) return String(entry.data.meta['id']).trim();
+    }
+    const s1 = getSectionValue(entry, CONFIG.SECTION_NAMES.PUBLIC_ID) 
+                || getSectionValue(entry, CONFIG.SECTION_NAMES.ID);
+    if(s1) return String(s1).trim();
+    if(entry && entry.file) return String(entry.file).replace(/\.[^.]+$/, '');
+    return '';
+  }
+
+  // テーブルセクションから指定カラムの値を取得
+  function getTableColumnValue(entry, sectionName, columnName){
+    if(!entry || !entry.data || !entry.data.sections) return '';
+    const v = entry.data.sections[sectionName];
+    if(!v || !Array.isArray(v) || v.length === 0) return '';
+    
+    // テーブル形式（オブジェクトの配列）
+    if(typeof v[0] === 'object'){
+      const firstRow = v[0];
+      return String(firstRow[columnName] || '').trim();
+    }
+    return '';
+  }
+
+  // メンバーの最深（deepest）セクション値を取得
+  function getDeepestValue(entry, sectionName){
+    if(!entry || !entry.data || !entry.data.sections) return '';
+    const v = entry.data.sections[sectionName];
+    if(!v) return '';
+    
+    // テーブル形式の場合、最初の行から指定カラムの値を取得
+    if(Array.isArray(v) && v.length && typeof v[0] === 'object'){
+      const firstRow = v[0];
+      return String(firstRow[sectionName] || Object.values(firstRow)[0] || '').trim();
+    }
+    
+    function deepest(node){
+      if(typeof node === 'string') return node;
+      if(Array.isArray(node) && node.length){
+        return deepest(node[node.length - 1]);
+      }
+      if(node && typeof node === 'object'){
+        if(Array.isArray(node.children) && node.children.length) return deepest(node.children);
+        if(node.text) return node.text;
+      }
+      return '';
+    }
+    
+    const res = deepest(v);
+    return res ? String(res).trim() : '';
+  }
+
+  // 配属日からの月数を計算
+  function calculateMonthsSinceAssignment(entry){
+    if(!entry) return '';
+    
+    const dateNames = [
+      CONFIG.SECTION_NAMES.ASSIGNMENT_DATE,
+      CONFIG.SECTION_NAMES.START_DATE,
+      '配属開始',
+      '配属開始日'
+    ];
+    
+    let raw = '';
+    for(const name of dateNames){
+      const v = getSectionValue(entry, name);
+      if(v) { raw = v; break; }
+    }
+
+    if(!raw) return '';
+    raw = String(raw).trim();
+
+    const { year, month, day } = parseDateString(raw);
+    if(!year || !month) return '';
+
+    const now = new Date();
+    const start = new Date(year, month - 1, day || 1);
+    if(isNaN(start)) return '';
+
+    let months = (now.getFullYear() - start.getFullYear()) * 12 + (now.getMonth() - start.getMonth());
+    if(now.getDate() < start.getDate()) months -= 1;
+    if(months < 0) months = 0;
+
+    return `配属${months}ヶ月`;
+  }
+
+  // 日付文字列を解析
+  function parseDateString(raw){
+    const patterns = [
+      { regex: /^(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})$/, extract: (m) => ({ year: parseInt(m[1]), month: parseInt(m[2]), day: parseInt(m[3]) }) },
+      { regex: /^(\d{4})年\s*(\d{1,2})月\s*(\d{1,2})日$/, extract: (m) => ({ year: parseInt(m[1]), month: parseInt(m[2]), day: parseInt(m[3]) }) },
+      { regex: /^(\d{4})[-\/](\d{1,2})$/, extract: (m) => ({ year: parseInt(m[1]), month: parseInt(m[2]), day: 1 }) },
+      { regex: /^(\d{4})年\s*(\d{1,2})月$/, extract: (m) => ({ year: parseInt(m[1]), month: parseInt(m[2]), day: 1 }) },
+      { regex: /^(\d{4})(\d{2})(\d{2})$/, extract: (m) => ({ year: parseInt(m[1]), month: parseInt(m[2]), day: parseInt(m[3]) }) }
+    ];
+
+    for(const p of patterns){
+      const m = raw.match(p.regex);
+      if(m) return p.extract(m);
+    }
+
+    const dt = new Date(raw);
+    if(!isNaN(dt)) {
+      return { year: dt.getFullYear(), month: dt.getMonth() + 1, day: dt.getDate() };
+    }
+
+    return { year: NaN, month: NaN, day: 1 };
+  }
+
+  // 写真パスを取得
+  function getImagePath(entry, basePath = CONFIG.BASE_CANDIDATES[0]){
+    const photoName = getSectionValue(entry, CONFIG.SECTION_NAMES.PHOTO);
+    if(!photoName) return '';
+    const file = String(photoName).trim().replace(/,/g, '.').replace(/\s+/g,'');
+    return `${basePath}photo/${encodeURI(file)}`;
+  }
+
+
+  // -----------------------------------------
+  // MBTI マッピング関連
+  // -----------------------------------------
+  function toHalfWidthAscii(raw){
+    return String(raw || '').replace(/[Ａ-Ｚａ-ｚ０-９]/g, ch => String.fromCharCode(ch.charCodeAt(0) - 0xFEE0));
+  }
+
+  function normalizeSectionKey(raw){
+    return toHalfWidthAscii(raw).toUpperCase().replace(/[\s_＿:：\-]/g, '');
+  }
+
+  function sectionValueToPlainText(value){
+    if(value === undefined || value === null) return '';
+    if(typeof value === 'string') return value;
+    if(Array.isArray(value)) return value.map(v => sectionValueToPlainText(v)).filter(Boolean).join(' ');
+    if(typeof value === 'object'){
+      if(value.text) return String(value.text);
+      return Object.values(value).map(v => sectionValueToPlainText(v)).filter(Boolean).join(' ');
+    }
+    return String(value);
+  }
+
+  function getSectionValueFlexible(entry, sectionNames){
+    if(!entry || !entry.data || !entry.data.sections) return '';
+    const targets = sectionNames.map(normalizeSectionKey);
+
+    for(const name of sectionNames){
+      const direct = entry.data.sections[name];
+      if(direct !== undefined && direct !== null) return sectionValueToPlainText(direct);
+    }
+
+    for(const [key, value] of Object.entries(entry.data.sections)){
+      if(targets.includes(normalizeSectionKey(key))) return sectionValueToPlainText(value);
+    }
+    return '';
+  }
+
+  function getRawMbti(entry){
+    return getSectionValueFlexible(entry, [
+      CONFIG.SECTION_NAMES.MBTI,
+      'ＭＢＴＩ',
+      'MBTIタイプ',
+      'MBTI Type',
+      '16タイプ',
+      '性格タイプ'
+    ]);
+  }
+
+  function normalizeMbti(raw){
+    if(!raw) return '';
+    const s = toHalfWidthAscii(raw).toUpperCase().replace(/[－―ー–—]/g, '-');
+    const compact = s.replace(/[^A-Z]/g, '');
+    const m = compact.match(/[EI][SN][TF][JP]/);
+    return m ? m[0] : '';
+  }
+
+  function getMbti(entry){
+    const fromSection = normalizeMbti(getRawMbti(entry));
+    if(fromSection) return fromSection;
+    return '';
+  }
+
+  function getMbtiStatus(entry){
+    const raw = getRawMbti(entry);
+    const mbti = getMbti(entry);
+    return {
+      name: getDisplayName(entry),
+      raw: raw || '',
+      mbti,
+      reason: mbti ? 'OK' : (raw ? 'MBTI値を認識できません' : 'MBTI未入力')
+    };
+  }
+
+  function getDisplayName(entry){
+    const last = getSectionValue(entry, CONFIG.SECTION_NAMES.LAST_NAME);
+    const first = getSectionValue(entry, CONFIG.SECTION_NAMES.FIRST_NAME);
+    const full = `${last || ''} ${first || ''}`.trim();
+    return full || entry.name || getPublicId(entry) || entry.file || '';
+  }
+
+  function getSamePositionIndex(positionCounts, positionKey){
+    const samePositionIndex = positionCounts[positionKey] || 0;
+    positionCounts[positionKey] = samePositionIndex + 1;
+    return samePositionIndex;
+  }
+
+  // 同じ表示座標のメンバーが完全に重ならないよう、表示上だけ小さく分散する。
+  // I/E を色軸にした場合、例: ISFJ と ESFJ は同じ XYZ 座標になるため、MBTI単位ではなく座標単位で分散する。
+  // 分散はタイプ解釈ではなく、点とラベルの重なり回避のための描画補正。
+  function getMbtiJitter2d(sameTypeIndex){
+    if(sameTypeIndex === 0) return { dx: 0, dy: 0 };
+    const goldenAngle = 2.399963229728653;
+    const ring = Math.ceil(sameTypeIndex / 6);
+    const radius = Math.min(28, 10 + Math.sqrt(sameTypeIndex) * 7 + ring * 2);
+    const angle = sameTypeIndex * goldenAngle;
+    return { dx: Math.cos(angle) * radius, dy: Math.sin(angle) * radius };
+  }
+
+  function getMbtiJitter3d(sameTypeIndex){
+    if(sameTypeIndex === 0) return { dx: 0, dy: 0, dz: 0 };
+    const goldenAngle = 2.399963229728653;
+    const ring = Math.ceil(sameTypeIndex / 6);
+    const radius = Math.min(82, 30 + Math.sqrt(sameTypeIndex) * 16 + ring * 6);
+    const angle = sameTypeIndex * goldenAngle;
+    return {
+      dx: Math.cos(angle) * radius,
+      dy: Math.sin(angle) * radius,
+      dz: ((sameTypeIndex % 7) - 3) * 14
+    };
+  }
+
+  function buildMbtiPlotMembers(list){
+    const valid = list
+      .map((m, originalIndex) => ({ member: m, originalIndex, mbti: getMbti(m) }))
+      .filter(x => x.mbti);
+
+    const positionCounts = {};
+    return valid.map((x) => {
+      const mbti = x.mbti;
+      const xBase = mbti[0] === 'E' ? 75 : 25;
+      const yBase = mbti[3] === 'J' ? 25 : 75;
+      const positionKey = `${xBase},${yBase}`;
+      const sameTypeIndex = getSamePositionIndex(positionCounts, positionKey);
+      const jitter = getMbtiJitter2d(sameTypeIndex);
+      const left = Math.max(6, Math.min(94, xBase + jitter.dx));
+      const top = Math.max(6, Math.min(94, yBase + jitter.dy));
+
+      return {
+        id: `${getPublicId(x.member) || x.member.id || x.originalIndex}-${mbti}-${sameTypeIndex}`,
+        name: getDisplayName(x.member),
+        mbti,
+        sameTypeIndex,
+        left: Math.round(left * 10) / 10,
+        top: Math.round(top * 10) / 10
+      };
+    });
+  }
+
+  function buildMbti3dPlotMembers(list){
+    const valid = list
+      .map((m, originalIndex) => ({ member: m, originalIndex, mbti: getMbti(m) }))
+      .filter(x => x.mbti);
+
+    const positionCounts = {};
+    return valid.map((x) => {
+      const mbti = x.mbti;
+      const baseX = mbti[3] === 'J' ? 135 : -135;  // P/J
+      const baseY = mbti[1] === 'S' ? 115 : -115;  // N/S
+      const baseZ = mbti[2] === 'T' ? 115 : -115;  // F/T
+      const positionKey = `${baseX},${baseY},${baseZ}`;
+      const sameTypeIndex = getSamePositionIndex(positionCounts, positionKey);
+      const jitter = getMbtiJitter3d(sameTypeIndex);
+
+      return {
+        id: `${getPublicId(x.member) || x.member.id || x.originalIndex}-${mbti}-3d-${sameTypeIndex}`,
+        name: getDisplayName(x.member),
+        mbti,
+        ei: mbti[0],
+        sameTypeIndex,
+        x: Math.round(baseX + jitter.dx),
+        y: Math.round(baseY + jitter.dy),
+        z: Math.round(baseZ + jitter.dz)
+      };
+    });
+  }
+
+  // -----------------------------------------
+  // アプリケーション本体
+  // -----------------------------------------
+  const app = createApp({
+    setup(){
+      const members = ref([]);
+      const lastUpdated = ref('-');
+      const error = ref('');
+      const selectedHtml = ref('');
+      const roots = ref([]);
+      const projects = ref([]);
+      const companies = ref([]);
+      const currentView = ref('organization');
+      const searchQuery = ref('');
+      const filterCompany = ref('');
+      const filterAssignment = ref('');
+      const filterProject = ref('');
+      const densityMode = ref('compact');
+      const mbti3dRotX = ref(-24);
+      const mbti3dRotY = ref(38);
+
+      const uniqueSorted = (values) => Array.from(new Set(values.map(v => String(v || '').trim()).filter(Boolean))).sort((a, b) => a.localeCompare(b, 'ja'));
+      const getAssignmentNamesForMember = (m) => {
+        const sec = m.data && m.data.sections && m.data.sections[CONFIG.SECTION_NAMES.ASSIGNMENT];
+        if(Array.isArray(sec) && sec.length && typeof sec[0] === 'object') return sec.map(row => row[CONFIG.SECTION_NAMES.ASSIGNMENT] || '').filter(Boolean);
+        const v = getDeepestValue(m, CONFIG.SECTION_NAMES.ASSIGNMENT) || getSectionValue(m, CONFIG.SECTION_NAMES.ASSIGNMENT);
+        return v ? [v] : [];
+      };
+      const getProjectNamesForMember = (m) => {
+        const sec = m.data && m.data.sections && m.data.sections[CONFIG.SECTION_NAMES.PROJECT];
+        if(!sec) return [];
+        if(Array.isArray(sec) && sec.length && typeof sec[0] === 'object') return sec.map(row => row['プロジェクト'] || row['project'] || row[Object.keys(row)[0]] || '').filter(Boolean);
+        if(Array.isArray(sec)) return sec.map(it => typeof it === 'string' ? it : (it && it.text ? it.text : '')).filter(Boolean);
+        return [String(sec)].filter(Boolean);
+      };
+      const getMemberSearchText = (m) => [
+        getDisplayName(m), getPublicId(m), getSectionValue(m, CONFIG.SECTION_NAMES.COMPANY),
+        getMbti(m), getSectionValue(m, CONFIG.SECTION_NAMES.COMPANY_ROLE), getSectionValue(m, CONFIG.SECTION_NAMES.COMPANY_ROLE_NAME),
+        getSectionValue(m, CONFIG.SECTION_NAMES.ASSIGNMENT_ROLE), getSectionValue(m, CONFIG.SECTION_NAMES.ASSIGNMENT_ROLE_NAME),
+        ...getAssignmentNamesForMember(m), ...getProjectNamesForMember(m)
+      ].join(' ').toLowerCase();
+      const companyOptions = computed(() => uniqueSorted(members.value.map(m => getSectionValue(m, CONFIG.SECTION_NAMES.COMPANY))));
+      const assignmentOptions = computed(() => uniqueSorted(members.value.flatMap(getAssignmentNamesForMember)));
+      const projectOptions = computed(() => uniqueSorted(members.value.flatMap(getProjectNamesForMember)));
+      const filteredMembers = computed(() => {
+        const q = searchQuery.value.toLowerCase();
+        return members.value.filter(m => {
+          if(q && !getMemberSearchText(m).includes(q)) return false;
+          if(filterCompany.value && String(getSectionValue(m, CONFIG.SECTION_NAMES.COMPANY)).trim() !== filterCompany.value) return false;
+          if(filterAssignment.value && !getAssignmentNamesForMember(m).map(String).map(v => v.trim()).includes(filterAssignment.value)) return false;
+          if(filterProject.value && !getProjectNamesForMember(m).map(String).map(v => v.trim()).includes(filterProject.value)) return false;
+          return true;
+        });
+      });
+      const visibleRoots = computed(() => buildOrganizationHierarchy(filteredMembers.value));
+      const visibleProjects = computed(() => buildProjectStructure(filteredMembers.value));
+      const visibleCompanies = computed(() => buildCompanyStructure(filteredMembers.value));
+      const mbti3dPlotMembers = computed(() => buildMbti3dPlotMembers(filteredMembers.value));
+      const mbtiUnmappedMembers = computed(() => filteredMembers.value.map(getMbtiStatus).filter(x => !x.mbti));
+      const resetFilters = () => {
+        searchQuery.value = '';
+        filterCompany.value = '';
+        filterAssignment.value = '';
+        filterProject.value = '';
+      };
+
+      // ビュー切り替え関数
+      const scrollToOrg = () => {
+        currentView.value = 'organization';
+        setTimeout(()=>{ const el = document.getElementById('organization'); if(el) el.scrollIntoView({behavior:'smooth', block:'start'}); }, 50);
+      };
+
+      const scrollToProjects = () => {
+        currentView.value = 'projects';
+        setTimeout(()=>{ const el = document.getElementById('projects'); if(el) el.scrollIntoView({behavior:'smooth', block:'start'}); }, 50);
+      };
+
+      const scrollToCompanies = () => {
+        currentView.value = 'company';
+        setTimeout(()=>{ const el = document.getElementById('companies'); if(el) el.scrollIntoView({behavior:'smooth', block:'start'}); }, 50);
+      };
+
+      const scrollToMbti3d = () => {
+        currentView.value = 'mbti3d';
+        setTimeout(()=>{ const el = document.getElementById('mbti3d'); if(el) el.scrollIntoView({behavior:'smooth', block:'start'}); }, 50);
+      };
+
+      const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
+
+      const setMbti3dView = (x, y) => {
+        mbti3dRotX.value = clamp(x, -75, 75);
+        mbti3dRotY.value = clamp(y, -180, 180);
+      };
+
+      const rotateMbti3d = (dx, dy) => {
+        setMbti3dView(mbti3dRotX.value + dx, mbti3dRotY.value + dy);
+      };
+
+      const resetMbti3dView = () => {
+        setMbti3dView(-24, 38);
+      };
+
+      // プロフィール開く
+      const openProfile = (file) => {
+        const entry = members.value.find(m => m.file === file);
+        if(!entry){ error.value = '指定されたメンバーが見つかりません。'; return }
+        if(entry.text){
+          try{
+            const rawHtml = typeof marked !== 'undefined' ? marked.parse(entry.text) : `<pre>${escapeHtml(entry.text)}</pre>`;
+            const safe = typeof DOMPurify !== 'undefined' ? DOMPurify.sanitize(rawHtml) : rawHtml;
+            selectedHtml.value = `<div class="mb-2"><strong>${escapeHtml(entry.name)}</strong></div><div class="markdown-content">${safe}</div>`;
+          }catch(e){
+            selectedHtml.value = `<pre>${escapeHtml(entry.text)}</pre>`;
+          }
+        }else{
+          selectedHtml.value = '読み込みに失敗しました。';
+        }
+      };
+
+      // ヘルパーオブジェクト
+      const helpers = {
+        getImageSrc: (n) => getImagePath(n),
+        getSection: (n, k) => getSectionValue(n, k),
+        getMbti: (n) => getMbti(n),
+        getDeepestSection: (n, k) => getDeepestValue(n, k),
+        getTableColumn: (n, sectionName, columnName) => getTableColumnValue(n, sectionName, columnName),
+        getMonthsSinceAssigned: (n) => calculateMonthsSinceAssignment(n),
+        openProfile
+      };
+
+      // ===== 組織階層構築のヘルパー関数群 =====
+      
+      // メンバーを複数配属に応じて展開
+      const expandMembersByAssignment = (list) => {
+        const expandedList = [];
+        for(const m of list) {
+          const assignments = m.data?.sections?.[CONFIG.SECTION_NAMES.ASSIGNMENT];
+          
+          if(Array.isArray(assignments) && assignments.length && typeof assignments[0] === 'object') {
+            for(let idx = 0; idx < assignments.length; idx++) {
+              const copy = Object.assign({}, m);
+              copy._assignmentRow = assignments[idx];
+              copy._assignmentIndex = idx;
+              copy.children = [];
+              expandedList.push(copy);
+            }
+          } else {
+            const copy = Object.assign({}, m);
+            copy.children = [];
+            expandedList.push(copy);
+          }
+        }
+        return expandedList;
+      };
+      
+      // 展開されたメンバーからIDマップを構築
+      const buildAssignmentInstanceMap = (expandedList) => {
+        const map = {};
+        for(const node of expandedList) {
+          const originalId = getPublicId(node);
+          node._originalId = originalId;
+          node._assignmentName = node._assignmentRow ? (node._assignmentRow[CONFIG.SECTION_NAMES.ASSIGNMENT] || '').trim() : '';
+          
+          if(!map[originalId]) {
+            map[originalId] = [];
+          }
+          map[originalId].push(node);
+        }
+        return map;
+      };
+      
+      // 親IDから上司IDを取得
+      const extractSupervisorIdFromMember = (member) => {
+        if(member._assignmentRow && member._assignmentRow[CONFIG.SECTION_NAMES.ASSIGNMENT_SUPERIOR]) {
+          return member._assignmentRow[CONFIG.SECTION_NAMES.ASSIGNMENT_SUPERIOR];
+        }
+        return extractSupervisorId(member, [CONFIG.SECTION_NAMES.ASSIGNMENT_SUPERIOR]) || '';
+      };
+      
+      // 子メンバーを親インスタンスに付ける
+      const findAndAttachParent = (member, memberInstanceMap, roots) => {
+        const supId = extractSupervisorIdFromMember(member);
+        
+        if(!supId || supId === member._originalId) {
+          roots.push(member);
+          return;
+        }
+        
+        const childAssignment = member._assignmentName;
+        const parentInstances = memberInstanceMap[supId];
+        
+        if(!parentInstances) {
+          roots.push(member);
+          return;
+        }
+        
+        // まず配属が一致する親を探す
+        for(const parentInstance of parentInstances) {
+          if(childAssignment && parentInstance._assignmentName && childAssignment === parentInstance._assignmentName) {
+            parentInstance.children.push(member);
+            return;
+          }
+        }
+        
+        // 配属が一致しない場合、親の最初のインスタンスに付ける
+        if(parentInstances[0]) {
+          parentInstances[0].children.push(member);
+        } else {
+          roots.push(member);
+        }
+      };
+
+      // メンバーの階層構築（組織表示用：配属上位者のみ使用）
+      const buildOrganizationHierarchy = (list) => {
+        const expandedList = expandMembersByAssignment(list);
+        const memberInstanceMap = buildAssignmentInstanceMap(expandedList);
+        const roots = [];
+        
+        for(const member of expandedList) {
+          findAndAttachParent(member, memberInstanceMap, roots);
+        }
+        
+        return roots;
+      };
+
+      // 会社ごとに階層構築
+      const buildCompanyStructure = (list) => {
+        const map = {};
+        for(const m of list){
+          const cname = getSectionValue(m, CONFIG.SECTION_NAMES.COMPANY) || 
+                        (m.data && m.data.meta && (m.data.meta['会社'] || m.data.meta['company'])) || 
+                        '未設定';
+          const name = String(cname).trim() || '未設定';
+          if(!map[name]) map[name] = [];
+          map[name].push(m);
+        }
+
+        const result = [];
+          for(const [cname, members] of Object.entries(map)){
+          const nodeMap = {};
+          const rootsLocal = [];
+          
+          // 各メンバーをコピーして ID を割り当て
+          for(const m of members){
+            const copy = Object.assign({}, m, { children: [] });
+            const id = getPublicId(m) || (`file:${m.file}`);
+            copy._id = id;
+            nodeMap[id] = copy;
+          }
+          
+          // 上司関係でリンク（会社上司のみ使用）
+          for(const id of Object.keys(nodeMap)){
+            const node = nodeMap[id];
+            const supId = extractSupervisorId(node, [CONFIG.SECTION_NAMES.COMPANY_SUPERVISOR]);
+            
+            if(supId && nodeMap[supId] && supId !== id){
+              nodeMap[supId].children.push(node);
+            } else {
+              rootsLocal.push(node);
+            }
+          }
+          
+          result.push({ name: cname, roots: rootsLocal, expanded: false });
+        }
+        return result;
+      };
+
+      // プロジェクトごとに階層構築
+      const buildProjectStructure = (list) => {
+        const map = {};
+        
+        // プロジェクト情報を収集
+        for(const m of list){
+          const sec = m.data && m.data.sections && m.data.sections[CONFIG.SECTION_NAMES.PROJECT];
+          if(!sec) continue;
+
+          if(Array.isArray(sec) && sec.length && typeof sec[0] === 'object'){
+            for(const row of sec){
+              const pname = row['プロジェクト'] || row['project'] || (row[Object.keys(row)[0]]||'');
+              if(!pname) continue;
+              if(!map[pname]) map[pname] = [];
+              const roleVal = row['プロジェクトロール'] || row['プロジェクト ロール'] || row['プロロール'] || row['ロール'] || row['role'] || row['役割'] || '';
+              const effort = (row['工数'] || row['工数(人月)'] || row['工数(人日)'] || row['hours'] || row['工数 '] || '');
+              const projectSup = row['プロジェクト上位者'] || row['プロジェクト 上位者'] || '';
+              map[pname].push({ member: m, role: roleVal, effort: String(effort).trim(), projectSuperior: String(projectSup).trim() });
+            }
+          } else if(Array.isArray(sec)){
+            for(const it of sec){
+              const pname = typeof it === 'string' ? it : (it && it.text ? it.text : '');
+              if(!pname) continue;
+              if(!map[pname]) map[pname] = [];
+              map[pname].push({ member: m, role: '', projectSuperior: '' });
+            }
+          }
+        }
+
+        // プロジェクト内で階層化
+        const result = [];
+        for(const [pname, entries] of Object.entries(map)){
+          const nodeMap = {};
+          const rootsLocal = [];
+          
+          // 各メンバーをコピーして ID を割り当て
+          for(const e of entries){
+            const copy = Object.assign({}, e.member, { children: [], roleInProject: e.role, projectEffort: e.effort || '', _projectSuperior: e.projectSuperior || '' });
+            const id = getPublicId(e.member) || (`file:${e.member.file}`);
+            copy._id = id;
+            nodeMap[id] = copy;
+          }
+          
+          // 上司関係でリンク（テーブルから取得したプロジェクト上位者を使用）
+          for(const id of Object.keys(nodeMap)){
+            const node = nodeMap[id];
+            // まずテーブルから取得したプロジェクト上位者を試す
+            let supId = node._projectSuperior;
+            // それがなければセクションから取得
+            if(!supId) {
+              supId = extractSupervisorId(node, [CONFIG.SECTION_NAMES.PROJECT_SUPERIOR]);
+            }
+            
+            if(supId && nodeMap[supId] && supId !== id){
+              nodeMap[supId].children.push(node);
+            } else {
+              rootsLocal.push(node);
+            }
+          }
+          
+          result.push({ name: pname, roots: rootsLocal, expanded: false });
+        }
+        return result;
+      };
+
+      // ===== デグレード試験用関数 =====
+      
+      // 階層構造をシリアライズして検証
+      const serializeHierarchy = (roots) => {
+        const serialize = (node, indent = 0) => {
+          const name = `${node._originalId || getPublicId(node)}`;
+          const assignment = node._assignmentName ? `-${node._assignmentName}` : '';
+          const line = `${'  '.repeat(indent)}${name}${assignment}`;
+          const childLines = (node.children || []).flatMap(c => serialize(c, indent + 1));
+          return [line, ...childLines];
+        };
+        return roots.flatMap(r => serialize(r)).join('\n');
+      };
+      
+      // デグレード試験：組織階層の構造を検証
+      const validateOrganizationHierarchy = (roots) => {
+        const results = {
+          totalInstances: 0,
+          totalRoots: 0,
+          membersWithMultipleAssignments: [],
+          hierarchyDepth: 0,
+          errors: []
+        };
+        
+        const countInstances = (roots) => {
+          let count = 0;
+          const visit = (node) => {
+            count++;
+            if(node.children) node.children.forEach(visit);
+          };
+          roots.forEach(visit);
+          return count;
+        };
+        
+        const getDepth = (node) => {
+          if(!node.children || node.children.length === 0) return 1;
+          return 1 + Math.max(...node.children.map(getDepth));
+        };
+        
+        results.totalInstances = countInstances(roots);
+        results.totalRoots = roots.length;
+        results.hierarchyDepth = roots.length > 0 ? Math.max(...roots.map(getDepth)) : 0;
+        
+        // 検証：同じメンバーが複数のインスタンスを持つか
+        const instanceMap = {};
+        const visit = (node) => {
+          const id = node._originalId || getPublicId(node);
+          if(!instanceMap[id]) instanceMap[id] = [];
+          instanceMap[id].push(node._assignmentName);
+          if(node.children) node.children.forEach(visit);
+        };
+        roots.forEach(visit);
+        
+        for(const [id, assignments] of Object.entries(instanceMap)) {
+          if(assignments.length > 1 && new Set(assignments).size > 1) {
+            results.membersWithMultipleAssignments.push({ id, assignments: Array.from(new Set(assignments)) });
+          }
+        }
+        
+        return results;
+      };
+
+      // メンバー数をカウント
+      const projectMemberCount = (project) => {
+        if(!project || !project.roots) return 0;
+        const seen = new Set();
+        function walk(node){
+          if(!node) return;
+          if(Array.isArray(node)) return node.forEach(n=>walk(n));
+          if(node._id) seen.add(node._id);
+          if(node.children && node.children.length) node.children.forEach(c=>walk(c));
+        }
+        project.roots.forEach(r=>walk(r));
+        return seen.size;
+      };
+
+      // プロジェクト内の工数合計を計算（数値部分を抽出して合計）
+      const projectTotalEffort = (project) => {
+        if(!project || !project.roots) return '';
+        let total = 0;
+        function walk(node){
+          if(!node) return;
+          if(Array.isArray(node)) return node.forEach(n=>walk(n));
+          const v = node.projectEffort || '';
+          if(v){
+            const m = String(v).match(/[-+]?[0-9]*[.,]?[0-9]+/);
+            if(m){
+              const num = parseFloat(m[0].replace(',','.'));
+              if(!isNaN(num)) total += num;
+            }
+          }
+          if(node.children && node.children.length) node.children.forEach(c=>walk(c));
+        }
+        project.roots.forEach(r=>walk(r));
+        if(total === 0) return '';
+        return (Math.round(total * 100) / 100).toString();
+      };
+
+      // ファイル読み込みと初期化
+      async function load(){
+        error.value = '';
+        members.value = [];
+        
+        let found = null;
+        for(const base of CONFIG.BASE_CANDIDATES){
+          const m = await tryManifest(base);
+          if(m && m.length){ found = { base, files: m }; break; }
+          const d = await tryDirectoryListing(base);
+          if(d && d.length){ found = { base, files: d }; break; }
+        }
+
+        if(!found){ error.value = 'Profile ディレクトリが見つかりません。'; return }
+
+        const { base, files } = found;
+        const list = [];
+        for(const f of files){
+          try{
+            const safe = String(f).replace(/\\/g,'/');
+            const url = `${base}${encodeURI(safe)}?t=${Date.now()}`;
+            const text = await fetchText(url);
+            const data = parseMarkdownToData(text);
+            const displayName = (data.meta && (data.meta['名前'] || data.meta['name'])) || data.name || f;
+            list.push({ id: `m-${list.length}`, name: displayName, file: f, text, data });
+          }catch(e){ 
+            list.push({ id: `m-${list.length}`, name: f, file: f, text: null, error: e.message }); 
+          }
+        }
+
+        members.value = list;
+        roots.value = buildOrganizationHierarchy(list);
+        
+        // ===== デグレード試験実行 =====
+        const testResults = validateOrganizationHierarchy(roots.value);
+        const hierarchyStr = serializeHierarchy(roots.value);
+        console.log('=== 組織階層 デグレード試験結果 ===');
+        console.log('総インスタンス数:', testResults.totalInstances);
+        console.log('ルート数:', testResults.totalRoots);
+        console.log('階層の最大深さ:', testResults.hierarchyDepth);
+        console.log('複数配属メンバー:', testResults.membersWithMultipleAssignments);
+        console.log('階層構造:\n' + hierarchyStr);
+        console.log('================================');
+        
+        projects.value = buildProjectStructure(list);
+        companies.value = buildCompanyStructure(list);
+        lastUpdated.value = new Date().toLocaleTimeString();
+      }
+
+      onMounted(load);
+
+      return {
+        members, lastUpdated, error, selectedHtml, load, openProfile, helpers,
+        roots, projects, companies, currentView, searchQuery, filterCompany, filterAssignment, filterProject, densityMode,
+        companyOptions, assignmentOptions, projectOptions, filteredMembers, visibleRoots, visibleProjects, visibleCompanies,
+        mbti3dPlotMembers, mbtiUnmappedMembers, mbti3dRotX, mbti3dRotY,
+        scrollToOrg, scrollToProjects, scrollToCompanies, scrollToMbti3d, resetMbti3dView, rotateMbti3d, setMbti3dView,
+        resetFilters, projectMemberCount, projectTotalEffort
+      };
+    }
+  });
+
+  // member-node コンポーネント
+  app.component('member-node', {
+    props: ['node','level','helpers','currentView','densityMode'],
+    data(){
+      return {
+        expanded: false,
+        groupedChildren: []
+      };
+    },
+    computed: {
+      assignmentName(){
+        if(!this.node._assignmentRow) return '';
+        return this.node._assignmentRow['配属'] || '';
+      },
+      hasChildren(){
+        return this.node.children && this.node.children.length > 0;
+      },
+      isCompact(){
+        return this.densityMode === 'compact';
+      }
+    },
+    methods: {
+      getAssignmentName(child){
+        // 複数の方法で配属名を取得（優先順）
+        let assignmentName = '';
+        
+        // 1. _assignmentRow から取得
+        if(child._assignmentRow && child._assignmentRow['配属']){
+          assignmentName = String(child._assignmentRow['配属']).trim();
+        }
+        // 2. テーブルカラムから取得
+        else if(this.helpers.getTableColumn){
+          assignmentName = this.helpers.getTableColumn(child, '配属', '配属');
+          if(assignmentName) assignmentName = String(assignmentName).trim();
+        }
+        // 3. セクションから取得（最深値）
+        if(!assignmentName && this.helpers.getDeepestSection){
+          assignmentName = this.helpers.getDeepestSection(child, '配属');
+          if(assignmentName) assignmentName = String(assignmentName).trim();
+        }
+        // 4. セクションから取得（通常）
+        if(!assignmentName && this.helpers.getSection){
+          assignmentName = this.helpers.getSection(child, '配属');
+          if(assignmentName) assignmentName = String(assignmentName).trim();
+        }
+        
+        return assignmentName || '未設定';
+      },
+      groupChildrenByAssignment(){
+        if(this.level !== 0 || !this.node.children || !this.node.children.length){
+          this.groupedChildren = [];
+          return;
+        }
+
+        const groups = {};
+        for(const child of this.node.children){
+          const assignmentName = this.getAssignmentName(child);
+
+          if(!groups[assignmentName]){
+            groups[assignmentName] = { name: assignmentName, children: [], expanded: false };
+          }
+          
+          // グループ内では元々の階層構造を保つ
+          groups[assignmentName].children.push(child);
+        }
+
+        // グループを「未設定」以外が最後に来るようにソート
+        this.groupedChildren = Object.values(groups).sort((a, b) => {
+          if(a.name === '未設定') return 1;
+          if(b.name === '未設定') return -1;
+          return a.name.localeCompare(b.name, 'ja');
+        });
+      },
+      toggleGroupExpand(group){
+        group.expanded = !group.expanded;
+      }
+    },
+    watch: {
+      'node.children'(){
+        this.groupChildrenByAssignment();
+      }
+    },
+    mounted(){
+      this.groupChildrenByAssignment();
+    },
+    template: `
+      <div :style="{ marginLeft: level * (isCompact ? 6 : 12) + 'px' }" :class="isCompact ? 'mb-1' : 'mb-3'">
+        <div class="card-base border border-transparent rounded-lg bg-white shadow-sm hover:shadow-lg cursor-pointer flex items-start relative" :class="isCompact ? 'p-2' : 'p-4'" @click="helpers.openProfile(node.file)">
+          <button v-if="hasChildren" @click.stop="expanded = !expanded" class="mr-2 mt-1 inline-flex h-6 w-6 flex-none items-center justify-center rounded-full bg-gray-100 text-xs text-gray-600 hover:bg-gray-200" :title="expanded ? '閉じる' : '展開'">
+            <span class="transition-transform inline-block" :style="{ transform: expanded ? 'rotate(90deg)' : 'rotate(0deg)' }">▶</span>
+          </button>
+          <div v-else class="mr-2 mt-1 h-6 w-6 flex-none"></div>
+          <div v-if="!isCompact" class="w-20 h-20 flex-none bg-gray-100 rounded-lg overflow-hidden flex items-center justify-center">
+            <img v-if="helpers.getImageSrc(node)" :src="helpers.getImageSrc(node)" alt="photo" class="object-cover w-full h-full" @error="(e)=>e.target.src = './Profile/photo/default.jpg'"/>
+            <div v-else class="text-sm text-gray-500">画像</div>
+          </div>
+          <div class="flex-1 pr-8" :class="isCompact ? 'ml-1' : 'ml-3'">
+            <div class="text-gray-900 leading-tight flex items-center gap-2 flex-wrap" :class="isCompact ? 'text-sm' : 'text-lg'">
+              <span class="font-medium">{{ helpers.getSection(node,'名前（姓）') }} {{ helpers.getSection(node,'名前（名）') }}</span>
+              <span v-if="helpers.getMbti && helpers.getMbti(node)" class="inline-flex items-center rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700 border border-blue-100">{{ helpers.getMbti(node) }}</span>
+              <span v-if="hasChildren" class="text-xs text-gray-400">{{ node.children.length }}名</span>
+            </div>
+            <div :class="isCompact ? 'mt-0.5' : 'mt-2'">
+              <template v-if="currentView === 'projects'">
+                <div v-if="node.roleInProject" class="text-left text-sm text-gray-700">{{ node.roleInProject }}</div>
+                <div v-else class="text-left text-sm text-gray-700">&nbsp;</div>
+              </template>
+              <template v-else-if="currentView === 'company'">
+                <div v-if="helpers.getSection(node,'会社ロール') || helpers.getSection(node,'会社ロール名')" class="text-left text-sm text-gray-700">{{ helpers.getSection(node,'会社ロール') || helpers.getSection(node,'会社ロール名') }}</div>
+                <div v-else class="text-left text-sm text-gray-700">&nbsp;</div>
+              </template>
+              <template v-else>
+                <div class="text-sm text-gray-700 leading-tight">
+                  <template v-if="node._assignmentRow">
+                    {{ (node._assignmentRow['配属'] || '').trim() }} - {{ (node._assignmentRow['配属ロール'] || '').trim() }}
+                  </template>
+                  <template v-else>
+                    {{ getAssignmentName(node) }} - {{ helpers.getTableColumn(node,'配属','配属ロール') || helpers.getSection(node,'配属ロール') || helpers.getSection(node,'配属ロール名') || helpers.getSection(node,'会社ロール') || '' }}
+                  </template>
+                </div>
+                <div class="text-sm text-gray-700 leading-tight">{{ helpers.getSection(node,'会社') }}</div>
+              </template>
+            </div>
+          </div>
+          <div v-if="currentView === 'projects' && node.projectEffort" class="absolute right-3 text-xs text-gray-700 bg-white/80 px-2 py-0.5 rounded" :class="isCompact ? 'top-2' : 'bottom-3'">工数: {{ node.projectEffort }}</div>
+          <div v-else-if="!isCompact && currentView !== 'projects' && helpers.getMonthsSinceAssigned && helpers.getMonthsSinceAssigned(node)" class="absolute bottom-3 right-3 text-xs text-gray-700 bg-white/80 px-2 py-0.5 rounded">{{ helpers.getMonthsSinceAssigned(node) }}</div>
+        </div>
+
+        <!-- グループ化された子ノード（レベル0でのみ、配属ごと） -->
+        <div v-if="expanded && currentView === 'organization' && level === 0 && groupedChildren.length > 0" class="mt-2 ml-4">
+          <div v-for="(group, idx) in groupedChildren" :key="'group-' + idx" class="mb-4">
+            <div class="flex items-center cursor-pointer bg-gray-50 rounded-lg p-2 hover:bg-gray-100" @click.stop="toggleGroupExpand(group)">
+              <span class="text-lg mr-2 transition-transform inline-block" :style="{ transform: group.expanded ? 'rotate(90deg)' : 'rotate(0deg)' }">▶</span>
+              <span class="text-sm font-semibold text-gray-700">{{ group.name }}</span>
+            </div>
+            <div v-if="group.expanded" class="mt-2 ml-2">
+              <member-node v-for="c in group.children" :key="c.id || c._id" :node="c" :level="level+1" :helpers="helpers" :current-view="currentView" :density-mode="densityMode"></member-node>
+            </div>
+          </div>
+        </div>
+
+        <!-- グループ化されていない子ノード（レベル1以上、または他のビューの場合） -->
+        <div v-else-if="expanded && node.children && node.children.length > 0" class="mt-2 ml-4">
+          <member-node v-for="c in node.children" :key="c.id || c._id" :node="c" :level="level+1" :helpers="helpers" :current-view="currentView" :density-mode="densityMode"></member-node>
+        </div>
+      </div>
+    `
+  });
+
+  app.mount('#app');
+  </script>
+</body>
+</html>
