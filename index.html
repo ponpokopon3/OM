@@ -696,21 +696,46 @@
     props:['roots','tagStyle','pick'],
     computed:{
       layout(){
-        const W=210,H=54,IND=44,VGAP=12; const boxes=[],paths=[]; let row=0;
-        const place=(node,depth)=>{ node._x=depth*(W+IND); node._y=row*(H+VGAP); row++;
-          boxes.push({key:node._id,node,x:node._x,y:node._y,w:W,h:H}); node.children.forEach(c=>place(c,depth+1)); };
-        (this.roots||[]).forEach(r=>place(r,0));
-        const connect=node=>{ const k=node.children; if(k.length){ const tx=node._x+20,yTop=node._y+H,yBot=k[k.length-1]._y+H/2;
+        const W=210,H=54,IND=44,VGAP=12,OFF=22,GGAP=18; const boxes=[],paths=[]; let row=0,extra=0,prevKey=null;
+        const gkey=n=> n._asg || (n.member && n.member.assignmentTop) || '';
+        const sortKids=arr=> arr.slice().sort((a,b)=> gkey(a).localeCompare(gkey(b),'ja'));
+        const place=(node,depth)=>{ const k=gkey(node);
+          if(prevKey!==null && k!==prevKey) extra+=GGAP;
+          node._x=depth*(W+IND); node._y=row*(H+VGAP)+OFF+extra; row++; prevKey=k;
+          boxes.push({key:node._id,node,x:node._x,y:node._y,w:W,h:H,gkey:k});
+          sortKids(node.children).forEach(c=>place(c,depth+1)); };
+        sortKids(this.roots||[]).forEach(r=>place(r,0));
+        const connect=node=>{ const k=node.children; if(k.length){ const tx=node._x+20,yTop=node._y+H,yBot=Math.max(...k.map(c=>c._y+H/2));
             paths.push(`M${tx},${yTop} L${tx},${yBot}`); k.forEach(c=>paths.push(`M${tx},${c._y+H/2} L${c._x},${c._y+H/2}`)); } k.forEach(connect); };
         (this.roots||[]).forEach(connect);
-        const width=Math.max(200,...boxes.map(b=>b.x+b.w))+20, height=Math.max(80,row*(H+VGAP))+8;
+        const width=Math.max(200,...boxes.map(b=>b.x+b.w))+20, height=Math.max(120,...boxes.map(b=>b.y+b.h))+14;
         return {boxes,paths,width,height};
+      },
+      regions(){
+        const boxes=this.layout.boxes; const runs=[]; let cur=null;
+        boxes.forEach(b=>{ const k=b.gkey;
+          if(!k){ cur=null; return; }
+          if(cur && cur.key===k) cur.boxes.push(b); else { cur={key:k,boxes:[b]}; runs.push(cur); } });
+        const PX=9,PT=16,PB=6;
+        return runs.filter(r=>r.boxes.length>=2).map((r,i)=>{
+          const x=Math.max(0,Math.min(...r.boxes.map(b=>b.x))-PX), y=Math.max(0,Math.min(...r.boxes.map(b=>b.y))-PT);
+          const w=Math.max(...r.boxes.map(b=>b.x+b.w))+PX-x, h=Math.max(...r.boxes.map(b=>b.y+b.h))+PB-y;
+          return {key:'r'+i,label:r.key,count:r.boxes.length,x,y,w,h};
+        });
       }
+    },
+    methods:{
+      hexToRgba(hex,a){ const h=String(hex).replace('#',''); const s=h.length===3?h.split('').map(c=>c+c).join(''):h; const n=parseInt(s,16); return `rgba(${(n>>16)&255},${(n>>8)&255},${n&255},${a})`; },
+      regionStyle(label,x,y,w,h){ const c=this.tagStyle(label); return { position:'absolute',left:x+'px',top:y+'px',width:w+'px',height:h+'px',borderRadius:'10px',pointerEvents:'none',background:this.hexToRgba(c.backgroundColor,0.5),border:'1px solid '+this.hexToRgba(c.color,0.32) }; },
+      labelColor(label){ return this.tagStyle(label).color; }
     },
     template:`
       <div v-if="!roots || !roots.length" class="nv-empty">該当データがありません。</div>
       <div v-else class="nv-tree">
         <div class="nv-tree-inner" :style="{width:layout.width+'px',height:layout.height+'px'}">
+          <div v-for="rg in regions" :key="rg.key" :style="regionStyle(rg.label,rg.x,rg.y,rg.w,rg.h)">
+            <span style="position:absolute;left:9px;top:3px;font-size:10px;font-weight:600;white-space:nowrap" :style="{color:labelColor(rg.label)}">{{ rg.label }}<span v-if="rg.count>1" style="opacity:.65"> ・{{ rg.count }}名</span></span>
+          </div>
           <svg :width="layout.width" :height="layout.height">
             <path v-for="(d,i) in layout.paths" :key="i" :d="d" fill="none" stroke="#cfceca" stroke-width="1.5"></path>
           </svg>
