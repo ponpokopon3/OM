@@ -159,6 +159,29 @@
   .nv-pwrow{display:flex;gap:8px;margin-top:14px;justify-content:flex-end}
   .nv-toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:70;background:#2c2c2a;color:#fff;padding:10px 18px;border-radius:8px;font-size:13px;box-shadow:0 6px 20px rgba(0,0,0,.2)}
   .nv-toast.error{background:#a3312a}
+  /* 構造化フォーム */
+  .nv-seg{display:inline-flex;border:1px solid var(--nv-border);border-radius:8px;overflow:hidden;margin-bottom:14px}
+  .nv-seg button{border:none;background:var(--nv-bg);padding:6px 16px;font-size:13px;color:var(--nv-text-2);cursor:pointer}
+  .nv-seg button.on{background:var(--nv-sel);color:#1a5aa0;font-weight:500}
+  .nv-frow{display:flex;gap:10px}
+  .nv-frow>.nv-efield{flex:1;min-width:0}
+  .nv-efield select{width:100%;height:34px;padding:0 8px;border:1px solid var(--nv-border);border-radius:6px;font-size:13px;font-family:inherit;background:var(--nv-bg);color:var(--nv-text);outline:none}
+  .nv-efield select:focus{border-color:var(--nv-accent)}
+  .nv-efgroup{margin:4px 0 14px;border:1px solid var(--nv-border);border-radius:8px;padding:10px}
+  .nv-efgroup-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;font-size:12px;color:var(--nv-text-3);font-weight:600}
+  .nv-addbtn{border:1px dashed var(--nv-border-strong);background:none;border-radius:6px;padding:3px 10px;font-size:12px;color:var(--nv-text-2);cursor:pointer}
+  .nv-addbtn:hover{background:var(--nv-hover)}
+  .nv-erow{display:flex;gap:6px;align-items:center;margin-bottom:6px}
+  .nv-erow input,.nv-erow select{height:32px;border:1px solid var(--nv-border);border-radius:6px;padding:0 8px;font-size:13px;font-family:inherit;background:var(--nv-bg);color:var(--nv-text);outline:none;min-width:0}
+  .nv-erow input:focus,.nv-erow select:focus{border-color:var(--nv-accent)}
+  .nv-erow>input:first-child{flex:2}
+  .nv-erow>input:nth-child(2){flex:1}
+  .nv-erow>select{flex:1.5}
+  .nv-rmbtn{flex:none;width:28px;height:28px;border:none;background:none;color:var(--nv-text-3);cursor:pointer;border-radius:5px;font-size:13px}
+  .nv-rmbtn:hover{background:#fbe8e6;color:#a3312a}
+  .nv-ehint{font-size:12px;color:var(--nv-text-3);padding:4px 2px}
+  .nv-req{display:inline-block;margin-left:6px;font-size:10px;font-weight:600;color:#a3312a;background:#fbe8e6;border-radius:4px;padding:1px 6px;vertical-align:1px}
+  .nv-opt{display:inline-block;margin-left:6px;font-size:10px;color:var(--nv-text-3);background:var(--nv-hover);border-radius:4px;padding:1px 6px;vertical-align:1px}
 
   /* MBTI 3D */
   .nv-warn{background:#fdf6e3;border:1px solid #f0e3b8;border-radius:8px;padding:12px 14px;font-size:13px;color:#7a5b12;margin-bottom:14px}
@@ -207,7 +230,7 @@
       </nav>
       <div class="nv-filters" v-if="members.length">
         <div class="nv-fl-title">フィルタ</div>
-        <div class="nv-fl"><label>検索</label><input v-model.trim="q" type="search" placeholder="名前・ID・ロール・MBTI"></div>
+        <div class="nv-fl"><label>検索</label><input v-model.trim="q" type="search" placeholder="名前・メール・ロール・MBTI"></div>
         <div class="nv-fl"><label>会社</label><select v-model="fCompany"><option value="">すべて</option><option v-for="n in companyOptions" :key="n" :value="n">{{ n }}</option></select></div>
         <div class="nv-fl"><label>配属</label><select v-model="fAssignment"><option value="">すべて</option><option v-for="n in assignmentOptions" :key="n" :value="n">{{ n }}</option></select></div>
         <div class="nv-fl"><label>プロジェクト</label><select v-model="fProject"><option value="">すべて</option><option v-for="n in projectOptions" :key="n" :value="n">{{ n }}</option></select></div>
@@ -255,7 +278,7 @@
               <div v-for="m in g.members" :key="m.id+g.key" class="nv-row" :class="{sel:selected&&selected.id===m.id}" @click="openPeek(m)">
                 <span class="nv-av" style="width:26px;height:26px"><img v-if="m.hasPhoto" :src="m.photo" @error="onImgErr($event,m)"><template v-else>{{ m.avatarText }}</template></span>
                 <span class="nv-name">{{ m.name }}</span>
-                <span class="nv-role">{{ m.companyRole || m.primaryRole }}</span>
+                <span class="nv-role">{{ m.freeText }}</span>
                 <span class="nv-spacer"></span>
                 <span class="nv-tags">
                   <span v-if="m.mbti" class="nv-tag" :style="tagStyle(m.mbti)">{{ m.mbti }}</span>
@@ -355,7 +378,7 @@
         <div class="nv-peek-bar">
           <span>{{ editing ? (isNew ? '新規メンバー' : '編集') : 'ピーク' }}</span><span class="g"></span>
           <template v-if="editing">
-            <button class="nv-textbtn" @click="showPreview=!showPreview">{{ showPreview ? '編集に戻る' : 'プレビュー' }}</button>
+            <button v-if="!formMode" class="nv-textbtn" @click="showPreview=!showPreview">{{ showPreview ? '編集に戻る' : 'プレビュー' }}</button>
             <button class="nv-textbtn primary" :disabled="saving" @click="saveEdit">{{ saving ? '保存中…' : '保存' }}</button>
             <button class="nv-iconbtn" title="キャンセル" @click="cancelEdit">✕</button>
           </template>
@@ -377,13 +400,14 @@
               <span v-for="pj in selected.projects" :key="pj.name" class="nv-tag" :style="tagStyle(pj.name)">{{ pj.name }}</span>
             </div>
             <div class="nv-props">
-              <div class="nv-prop"><span class="k">公開ID</span><span class="v">{{ selected.id }}</span></div>
-              <div class="nv-prop" v-if="selected.assignmentPath.length"><span class="k">配属</span><span class="v">{{ selected.assignmentPath.join(' / ') }}</span></div>
-              <div class="nv-prop" v-if="selected.primaryRole"><span class="k">配属ロール</span><span class="v">{{ selected.primaryRole }}</span></div>
-              <div class="nv-prop" v-if="supName(selected.assignmentSupervisorId)"><span class="k">配属上位者</span><span class="v">{{ supName(selected.assignmentSupervisorId) }}</span></div>
+              <div class="nv-prop"><span class="k">メールアドレス</span><span class="v">{{ selected.id }}</span></div>
               <div class="nv-prop" v-if="supName(selected.companySupervisorId)"><span class="k">会社上司</span><span class="v">{{ supName(selected.companySupervisorId) }}</span></div>
               <div class="nv-prop" v-if="selected.monthsSince"><span class="k">配属歴</span><span class="v">{{ selected.monthsSince }}</span></div>
             </div>
+            <template v-if="peekAssignments.length">
+              <div class="nv-sec-label">配属</div>
+              <div v-for="(a,i) in peekAssignments" :key="i" class="nv-prop"><span class="k">{{ a.name }}</span><span class="v">{{ a.role }}<template v-if="supName(a.supervisorId)"> ・上位者 {{ supName(a.supervisorId) }}</template></span></div>
+            </template>
             <template v-if="selected.projects.length">
               <div class="nv-sec-label">プロジェクト</div>
               <div v-for="pj in selected.projects" :key="pj.name" class="nv-prop"><span class="k">{{ pj.name }}</span><span class="v">{{ pj.role }}<template v-if="pj.effort"> ・工数 {{ pj.effort }}</template></span></div>
@@ -396,18 +420,81 @@
           <!-- 編集 -->
           <template v-else>
             <div v-if="editError" class="nv-ederr">{{ editError }}</div>
-            <div v-if="isNew" class="nv-efield"><label>ファイル名（.md）</label><input v-model="draftFile" placeholder="例: yamada.md"></div>
-            <div class="nv-efield"><label>写真</label>
+            <div class="nv-seg">
+              <button :class="{on:formMode}" @click="setFormMode(true)">フォーム</button>
+              <button :class="{on:!formMode}" @click="setFormMode(false)">Markdown</button>
+            </div>
+            <div v-if="isNew" class="nv-efield"><label>ファイル名（.md）<span class="nv-req">必須</span></label><input v-model="draftFile" @input="fileNameTouched=true" :placeholder="defaultFileName || '例: yamada.md'"></div>
+            <div class="nv-efield"><label>写真<span class="nv-opt">任意</span></label>
               <div style="display:flex;align-items:center;gap:10px">
                 <span class="nv-av" style="width:44px;height:44px;font-size:16px">{{ draftAvatar }}</span>
                 <label class="nv-filebtn">写真をアップロード<input type="file" accept="image/*" @change="onPhotoPick" style="display:none"></label>
               </div>
             </div>
-            <template v-if="!showPreview">
-              <label class="nv-elabel">Markdown 本文</label>
-              <textarea class="nv-textarea" v-model="draft" spellcheck="false"></textarea>
+
+            <!-- フォーム編集 -->
+            <template v-if="formMode">
+              <div class="nv-frow">
+                <div class="nv-efield"><label>名前（姓）<span class="nv-req">必須</span></label><input v-model="form.lastName"></div>
+                <div class="nv-efield"><label>名前（名）<span class="nv-req">必須</span></label><input v-model="form.firstName"></div>
+              </div>
+              <div class="nv-frow">
+                <div class="nv-efield"><label>メールアドレス<span class="nv-req">必須</span></label><input v-model="form.id" placeholder="name@example.com"></div>
+                <div class="nv-efield"><label>MBTI<span class="nv-opt">任意</span></label>
+                  <select v-model="form.mbti"><option value="">—</option>
+                    <option v-if="form.mbti && !mbtiTypes.includes(form.mbti)" :value="form.mbti">{{ form.mbti }}</option>
+                    <option v-for="t in mbtiTypes" :key="t" :value="t">{{ t }}</option></select>
+                </div>
+              </div>
+              <div class="nv-frow">
+                <div class="nv-efield"><label>会社<span class="nv-req">必須</span></label><input v-model="form.company" list="dl-companies"></div>
+                <div class="nv-efield"><label>会社ロール<span class="nv-opt">任意</span></label><input v-model="form.companyRole"></div>
+              </div>
+              <div class="nv-efield"><label>会社上司<span class="nv-opt">任意</span></label>
+                <select v-model="form.companySupervisorId"><option value="">—</option>
+                  <option v-for="m in memberOptions" :key="m.id" :value="m.id">{{ m.name }}（{{ m.id }}）</option></select>
+              </div>
+              <div class="nv-efield"><label>配属日<span class="nv-opt">任意</span></label><input v-model="form.assignmentDate" placeholder="2024/04"></div>
+
+              <div class="nv-efgroup">
+                <div class="nv-efgroup-head"><span>配属<span class="nv-opt">任意</span></span><button class="nv-addbtn" @click="addAssignment">＋ 行を追加</button></div>
+                <div v-for="(a,i) in form.assignments" :key="'a'+i" class="nv-erow">
+                  <input v-model="a.name" list="dl-assignments" placeholder="配属名">
+                  <input v-model="a.role" placeholder="ロール">
+                  <select v-model="a.supervisorId"><option value="">上位者 —</option><option v-for="m in memberOptions" :key="m.id" :value="m.id">{{ m.name }}</option></select>
+                  <button class="nv-rmbtn" @click="form.assignments.splice(i,1)" title="削除">✕</button>
+                </div>
+                <div v-if="!form.assignments.length" class="nv-ehint">（配属なし）</div>
+              </div>
+
+              <div class="nv-efgroup">
+                <div class="nv-efgroup-head"><span>プロジェクト<span class="nv-opt">任意</span></span><button class="nv-addbtn" @click="addProject">＋ 行を追加</button></div>
+                <div v-for="(p,i) in form.projects" :key="'p'+i" class="nv-erow">
+                  <input v-model="p.name" list="dl-projects" placeholder="PJ名">
+                  <input v-model="p.role" placeholder="ロール">
+                  <select v-model="p.supervisorId"><option value="">上位者 —</option><option v-for="m in memberOptions" :key="m.id" :value="m.id">{{ m.name }}</option></select>
+                  <input v-model="p.effort" placeholder="工数" style="flex:none;width:52px">
+                  <button class="nv-rmbtn" @click="form.projects.splice(i,1)" title="削除">✕</button>
+                </div>
+                <div v-if="!form.projects.length" class="nv-ehint">（プロジェクトなし）</div>
+              </div>
+
+              <div class="nv-efield"><label>自由記述<span class="nv-opt">任意</span></label><textarea class="nv-textarea" style="min-height:120px" v-model="form.freeText" spellcheck="false"></textarea></div>
+
+              <datalist id="dl-companies"><option v-for="n in companyOptions" :key="n" :value="n"></option></datalist>
+              <datalist id="dl-assignments"><option v-for="n in assignmentOptions" :key="n" :value="n"></option></datalist>
+              <datalist id="dl-projects"><option v-for="n in projectOptions" :key="n" :value="n"></option></datalist>
             </template>
-            <div v-else class="nv-page" v-html="draftPreviewHtml"></div>
+
+            <!-- Markdown編集 -->
+            <template v-else>
+              <template v-if="!showPreview">
+                <label class="nv-elabel">Markdown 本文</label>
+                <textarea class="nv-textarea" v-model="draft" spellcheck="false"></textarea>
+              </template>
+              <div v-else class="nv-page" v-html="draftPreviewHtml"></div>
+            </template>
+
             <button v-if="!isNew" class="nv-delbtn" @click="deleteMember">このメンバーを削除</button>
           </template>
         </div>
@@ -439,13 +526,12 @@
      設定層(1): FIELD_MAP — 日本語キー(表記ゆれ含む)はここだけ
      ========================================================= */
   const FIELD = {
-    publicId:['公開ID','id','ID'],
+    publicId:['メールアドレス','メール','email','Email','E-mail','mail','公開ID','id','ID'],
     firstName:['名前（名）','名前(名)','名'],
     lastName:['名前（姓）','名前(姓)','姓'],
     name:['名前','氏名','name'],
     company:['会社','company'],
-    companyRole:['会社ロール','会社役職'],
-    companyRoleName:['会社ロール名'],
+    companyRole:['会社ロール','会社役職','会社ロール名'],
     companySupervisorId:['会社上司'],
     assignment:['配属'],
     assignmentRole:['配属ロール','配属ロール名'],
@@ -508,9 +594,11 @@
     return parseNestedList(lines);
   }
   function parseTable(lines,hi){
-    const headers=lines[hi].split('|').map(s=>s.trim()).filter(s=>s.length); const rows=[];
+    // 先頭/末尾のパイプ由来の空セルのみ除去し、中間の空セルは位置を保持する
+    const cells=ln=>{ let c=ln.split('|'); if(c.length&&c[0].trim()==='') c=c.slice(1); if(c.length&&c[c.length-1].trim()==='') c=c.slice(0,-1); return c.map(s=>s.trim()); };
+    const headers=cells(lines[hi]).filter(s=>s.length); const rows=[];
     for(let r=hi+2;r<lines.length;r++){ if(!/^\|.*\|/.test(lines[r])) break;
-      const cols=lines[r].split('|').map(s=>s.trim()).filter((_,i,a)=>i>0||a.length>1).filter(s=>s!=='');
+      const cols=cells(lines[r]);
       const o={}; for(let j=0;j<headers.length;j++) o[headers[j]]=cols[j]!==undefined?cols[j]:''; rows.push(o); }
     return rows;
   }
@@ -602,7 +690,7 @@
   function normalizeMember(raw,file){
     const s=raw.sections,meta=raw.meta;
     const t=keys=>plainText(sectionRaw(s,keys));
-    const id=(meta['公開ID']||meta['id']||t(FIELD.publicId)||file.replace(/\.[^.]+$/,'')).trim();
+    const id=(meta['メールアドレス']||meta['公開ID']||meta['id']||t(FIELD.publicId)||file.replace(/\.[^.]+$/,'')).trim();
     const lastName=t(FIELD.lastName),firstName=t(FIELD.firstName);
     let name=meta['名前']||meta['name']||`${lastName} ${firstName}`.trim()||t(FIELD.name); if(!name) name=id||file;
     const photoName=t(FIELD.photo); const photoFile=photoName?photoName.replace(/,/g,'.').replace(/\s+/g,''):'';
@@ -613,11 +701,12 @@
     const avatarBase=(lastName||name||id||'').trim();
     return {
       id,file,name,firstName,lastName,avatarText:avatarBase?avatarBase.slice(0,1):'?',
-      company:t(FIELD.company), companyRole:t(FIELD.companyRole)||t(FIELD.companyRoleName), companySupervisorId:cleanId(t(FIELD.companySupervisorId)),
+      company:t(FIELD.company), companyRole:t(FIELD.companyRole), companySupervisorId:cleanId(t(FIELD.companySupervisorId)),
       assignments, assignmentPath:primary.path, assignmentTop:primary.path[0]||'', primaryRole:primary.role, assignmentSupervisorId:primary.supervisorId,
       assignmentDate, monthsSince:ten.label, tenureMonths:ten.n,
       projects:buildProjects(sectionRaw(s,FIELD.project)),
       mbti:normMbti(t(FIELD.mbti)), mbtiRaw:t(FIELD.mbti),
+      freeText:t(['自由記述']),
       photo:hasPhoto?`${BASE}photo/${encodeURI(photoFile)}`:'', hasPhoto,
       raw, text:null,
     };
@@ -776,7 +865,7 @@
       </div>`
   };
 
-  const { createApp, ref, computed } = Vue;
+  const { createApp, ref, computed, reactive, watch } = Vue;
   const app = createApp({
     setup(){
       const members=ref([]), lastUpdated=ref('-'), error=ref('');
@@ -788,12 +877,16 @@
       const editMode=ref(false), editPassword=ref(''), pwOpen=ref(false), pwInput=ref(''), pwError=ref('');
       const editing=ref(false), isNew=ref(false), draft=ref(''), draftFile=ref(''), showPreview=ref(false);
       const editError=ref(''), saving=ref(false), toastMsg=ref(''), toastType=ref('ok');
+      const formMode=ref(true), fileNameTouched=ref(false);
+      const mbtiTypes=['INTJ','INTP','ENTJ','ENTP','INFJ','INFP','ENFJ','ENFP','ISTJ','ISFJ','ESTJ','ESFJ','ISTP','ISFP','ESTP','ESFP'];
+      const form=reactive({photo:'',id:'',lastName:'',firstName:'',company:'',companyRole:'',companySupervisorId:'',assignmentDate:'',mbti:'',assignments:[],projects:[],freeText:'',_extra:[]});
 
       const TITLES={list:'メンバー一覧',org:'組織図',projects:'プロジェクト',companies:'会社',mbti:'MBTIマッピング'};
       const viewTitle=computed(()=>TITLES[view.value]||'');
       const uniq=vals=>Array.from(new Set(vals.map(v=>String(v||'').trim()).filter(Boolean))).sort((a,b)=>a.localeCompare(b,'ja'));
       const idMap=computed(()=>{ const m={}; for(const x of members.value) m[x.id]=x; return m; });
       const supName=id=>{ const m=idMap.value[id]; return m?m.name:''; };
+      const peekAssignments=computed(()=> (selected.value&&selected.value.assignments)?selected.value.assignments.filter(a=>a.name):[]);
 
       const companyOptions=computed(()=>uniq(members.value.map(m=>m.company)));
       const assignmentOptions=computed(()=>uniq(members.value.flatMap(m=>m.assignments.map(a=>a.name).concat(m.assignmentTop))));
@@ -848,17 +941,76 @@
 
       // ---- 編集機能 ----
       const NEW_TEMPLATE=[
-        '## 写真','default.jpg','','## 公開ID','','','## 名前（姓）','','','## 名前（名）','','',
+        '## 写真','default.jpg','','## メールアドレス','','','## 名前（姓）','','','## 名前（名）','','',
         '## 会社','','','## 会社ロール','','','## 会社上司','','',
-        '## 配属','- ','','## 配属ロール','','','## 配属上位者','','','## 配属日','','',
+        '## 配属','|配属|配属ロール|配属上位者|','|---|---|---|','','## 配属日','','',
         '## プロジェクト','|プロジェクト|プロジェクトロール|プロジェクト上位者|工数|','|---|---|---|---|','',
         '## MBTI','',''
       ].join('\n');
       const draftPreviewHtml=computed(()=>{
         try{ const r=typeof marked!=='undefined'?marked.parse(draft.value||''):''; return typeof DOMPurify!=='undefined'?DOMPurify.sanitize(r):r; }catch(e){ return ''; }
       });
-      const draftAvatar=computed(()=>{ const s=parseMarkdown(draft.value||'').sections; const nm=plainText(sectionRaw(s,FIELD.lastName))||plainText(sectionRaw(s,FIELD.name)); return (nm||'?').slice(0,1); });
+      const draftAvatar=computed(()=>{
+        if(formMode.value){ const nm=String(form.lastName||form.firstName||'').trim(); return (nm||'?').slice(0,1); }
+        const s=parseMarkdown(draft.value||'').sections; const nm=plainText(sectionRaw(s,FIELD.lastName))||plainText(sectionRaw(s,FIELD.name)); return (nm||'?').slice(0,1);
+      });
       const authHeaders=()=>({'X-Edit-Password':editPassword.value});
+      const esc=v=>String(v==null?'':v).trim();
+      const memberOptions=computed(()=> members.value.map(m=>({id:m.id,name:m.name})).sort((a,b)=>a.name.localeCompare(b.name,'ja')));
+      const defaultFileName=computed(()=>{
+        const c=esc(form.company),ln=esc(form.lastName),fn=esc(form.firstName);
+        if(!c&&!ln&&!fn) return '';
+        const base=`${c}_${ln}${fn}`.replace(/[\\\/\s]/g,'');
+        return base?base+'.md':'';
+      });
+      const rawSectionBody=(md,name)=>{
+        const lines=(md||'').split(/\r?\n/); let start=-1;
+        for(let i=0;i<lines.length;i++){ const h=lines[i].match(/^##\s+(.*)$/); if(h&&h[1].trim()===name){ start=i+1; break; } }
+        if(start===-1) return '';
+        let end=lines.length; for(let i=start;i<lines.length;i++){ if(/^##\s+/.test(lines[i])){ end=i; break; } }
+        return lines.slice(start,end).join('\n').replace(/^\n+|\s+$/g,'');
+      };
+      const parseFormFromDraft=()=>{
+        const s=parseMarkdown(draft.value||'').sections; const t=keys=>plainText(sectionRaw(s,keys));
+        form.photo=t(FIELD.photo); form.id=t(FIELD.publicId);
+        form.lastName=t(FIELD.lastName); form.firstName=t(FIELD.firstName);
+        form.company=t(FIELD.company); form.companyRole=t(FIELD.companyRole);
+        form.companySupervisorId=cleanId(t(FIELD.companySupervisorId)); form.assignmentDate=t(FIELD.assignmentDate);
+        const rawM=t(FIELD.mbti); form.mbti=normMbti(rawM)||rawM;
+        form.assignments=buildAssignments(sectionRaw(s,FIELD.assignment),t(FIELD.assignmentRole),t(FIELD.assignmentSupervisorId))
+          .filter(a=>a.name||a.role||a.supervisorId).map(a=>({name:a.name,role:a.role,supervisorId:a.supervisorId}));
+        form.projects=buildProjects(sectionRaw(s,FIELD.project)).map(p=>({name:p.name,role:p.role,supervisorId:p.supervisorId,effort:p.effort}));
+        form.freeText=rawSectionBody(draft.value,'自由記述');
+        const known=new Set([].concat.apply([],Object.values(FIELD)).map(normKey)); known.add(normKey('自由記述'));
+        form._extra=Object.keys(s).filter(k=>!known.has(normKey(k))).map(k=>({name:k,body:rawSectionBody(draft.value,k)}));
+      };
+      const serializeFormToDraft=()=>{
+        const L=[]; const sec=(name,body)=>{ L.push('## '+name); L.push(body); L.push(''); };
+        sec('写真', esc(form.photo)||'default.jpg');
+        sec('メールアドレス', esc(form.id));
+        sec('名前（姓）', esc(form.lastName));
+        sec('名前（名）', esc(form.firstName));
+        sec('会社', esc(form.company));
+        sec('会社ロール', esc(form.companyRole));
+        sec('会社上司', esc(form.companySupervisorId));
+        const ar=form.assignments.filter(a=>esc(a.name)||esc(a.role)||esc(a.supervisorId));
+        sec('配属', ['|配属|配属ロール|配属上位者|','|---|---|---|'].concat(ar.map(a=>`|${esc(a.name)}|${esc(a.role)}|${esc(a.supervisorId)}|`)).join('\n'));
+        sec('配属日', esc(form.assignmentDate));
+        const pr=form.projects.filter(p=>esc(p.name)||esc(p.role)||esc(p.supervisorId)||esc(p.effort));
+        sec('プロジェクト', ['|プロジェクト|プロジェクトロール|プロジェクト上位者|工数|','|---|---|---|---|'].concat(pr.map(p=>`|${esc(p.name)}|${esc(p.role)}|${esc(p.supervisorId)}|${esc(p.effort)}|`)).join('\n'));
+        sec('MBTI', esc(form.mbti));
+        if(esc(form.freeText)) sec('自由記述', String(form.freeText).replace(/\s+$/,''));
+        (form._extra||[]).forEach(x=>{ if(esc(x.body)) sec(x.name, String(x.body).replace(/\s+$/,'')); });
+        draft.value=L.join('\n').replace(/\n{3,}/g,'\n\n').replace(/\s+$/,'')+'\n';
+      };
+      const setFormMode=(toForm)=>{
+        if(toForm===formMode.value) return;
+        if(toForm){ parseFormFromDraft(); formMode.value=true; }
+        else { serializeFormToDraft(); formMode.value=false; showPreview.value=false; }
+      };
+      const addAssignment=()=>{ form.assignments.push({name:'',role:'',supervisorId:''}); };
+      const addProject=()=>{ form.projects.push({name:'',role:'',supervisorId:'',effort:''}); };
+      watch(defaultFileName,(v)=>{ if(isNew.value&&!fileNameTouched.value) draftFile.value=v; });
       const toast=(msg,type)=>{ toastMsg.value=msg; toastType.value=type||'ok'; setTimeout(()=>{ if(toastMsg.value===msg) toastMsg.value=''; },2600); };
       const setSection=(md,name,value)=>{
         const lines=(md||'').split(/\r?\n/); const key='##'+name.replace(/\s+/g,''); let start=-1;
@@ -867,8 +1019,8 @@
         let end=lines.length; for(let i=start+1;i<lines.length;i++){ if(/^##\s+/.test(lines[i])){ end=i; break; } }
         return lines.slice(0,start+1).concat([value,''],lines.slice(end)).join('\n');
       };
-      const startEdit=()=>{ editing.value=true; isNew.value=false; draft.value=selected.value.text||''; draftFile.value=selected.value.file; showPreview.value=false; editError.value=''; peekFull.value=false; };
-      const startNew=()=>{ selected.value={__new:true,name:'新規メンバー'}; editing.value=true; isNew.value=true; draft.value=NEW_TEMPLATE; draftFile.value=''; showPreview.value=false; editError.value=''; };
+      const startEdit=()=>{ editing.value=true; isNew.value=false; draft.value=selected.value.text||''; draftFile.value=selected.value.file; showPreview.value=false; editError.value=''; peekFull.value=false; formMode.value=true; fileNameTouched.value=true; parseFormFromDraft(); };
+      const startNew=()=>{ selected.value={__new:true,name:'新規メンバー'}; editing.value=true; isNew.value=true; draft.value=NEW_TEMPLATE; draftFile.value=''; showPreview.value=false; editError.value=''; formMode.value=true; fileNameTouched.value=false; parseFormFromDraft(); };
       const cancelEdit=()=>{ editing.value=false; if(isNew.value) selected.value=null; isNew.value=false; editError.value=''; };
       const toggleMode=()=>{ if(editMode.value){ editMode.value=false; if(editing.value) cancelEdit(); } else { pwInput.value=''; pwError.value=''; pwOpen.value=true; } };
       const submitPassword=async()=>{
@@ -882,6 +1034,13 @@
       };
       const saveEdit=async()=>{
         editError.value='';
+        if(formMode.value) serializeFormToDraft();
+        if(isNew.value && !draftFile.value.trim() && defaultFileName.value) draftFile.value=defaultFileName.value;
+        // 必須項目チェック
+        const rs=parseMarkdown(draft.value||'').sections;
+        const req=[['メールアドレス',FIELD.publicId],['名前（姓）',FIELD.lastName],['名前（名）',FIELD.firstName],['会社',FIELD.company]];
+        const missing=req.filter(([,keys])=>!plainText(sectionRaw(rs,keys)).trim()).map(([l])=>l);
+        if(missing.length){ editError.value='必須項目が未入力です: '+missing.join('・'); return; }
         try{
           if(isNew.value){
             let f=draftFile.value.trim(); if(!f){ editError.value='ファイル名を入力してください'; return; }
@@ -919,13 +1078,12 @@
       const onPhotoPick=async(e)=>{
         const file=e.target.files&&e.target.files[0]; if(!file) return;
         const ext=((file.name.split('.').pop())||'jpg').toLowerCase();
-        const s=parseMarkdown(draft.value||'').sections;
-        const idBase=(plainText(sectionRaw(s,FIELD.publicId))||draftFile.value.replace(/\.md$/i,'')||'photo').replace(/[\\\/\s]/g,'');
+        const idBase=(esc(form.id)||plainText(sectionRaw(parseMarkdown(draft.value||'').sections,FIELD.publicId))||draftFile.value.replace(/\.md$/i,'')||'photo').replace(/[\\\/\s]/g,'');
         const photoName=`${idBase}.${ext}`;
         try{
           const buf=await file.arrayBuffer();
           const res=await fetch('/api/photos',{method:'POST',headers:{...authHeaders(),'X-File-Name':photoName},body:buf});
-          if(res.status===200){ draft.value=setSection(draft.value,'写真',photoName); toast('写真をアップロードしました'); }
+          if(res.status===200){ form.photo=photoName; if(!formMode.value) draft.value=setSection(draft.value,'写真',photoName); toast('写真をアップロードしました'); }
           else if(res.status===401){ editError.value='パスワードが違います'; editMode.value=false; }
           else toast('写真アップロードに失敗しました','error');
         }catch(err){ toast('サーバに接続できません','error'); }
@@ -953,9 +1111,10 @@
       return { members,lastUpdated,error,view,viewTitle,q,fCompany,fAssignment,fProject,groupBy,sortBy,openGroups,
         selected,selectedHtml,peekFull,mbtiRotX,mbtiRotY,
         companyOptions,assignmentOptions,projectOptions,filtered,listGroups,orgRoots,projectTrees,companyTrees,mbti3dPlot,mbtiUnmapped,
-        supName,tagStyle,toggleGroup,resetFilters,onImgErr,openPeek,closePeek,setMbti,rotateMbti,resetMbti,
+        supName,peekAssignments,tagStyle,toggleGroup,resetFilters,onImgErr,openPeek,closePeek,setMbti,rotateMbti,resetMbti,
         editMode,pwOpen,pwInput,pwError,editing,isNew,draft,draftFile,showPreview,editError,saving,toastMsg,toastType,
-        draftPreviewHtml,draftAvatar,toggleMode,submitPassword,startEdit,startNew,cancelEdit,saveEdit,deleteMember,onPhotoPick };
+        draftPreviewHtml,draftAvatar,toggleMode,submitPassword,startEdit,startNew,cancelEdit,saveEdit,deleteMember,onPhotoPick,
+        formMode,fileNameTouched,mbtiTypes,form,memberOptions,defaultFileName,setFormMode,addAssignment,addProject };
     }
   });
   app.component('cascade-tree',CascadeTree);
