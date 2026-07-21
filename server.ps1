@@ -26,6 +26,30 @@ function Get-ContentType {
 	}
 }
 
+# --- セキュリティ: 配信可否とルート内判定 ---
+$script:DriveRoot = [System.IO.Path]::GetFullPath("$Drive\")
+$script:SensitiveNames = @('config.json')
+$script:BlockedExt = @('.ps1', '.psm1', '.bat', '.cmd')
+$script:PhotoExts = @('.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp')
+$script:MaxPhotoBytes = 5MB
+
+# 要求パスがドライブ配下に収まるか（パストラバーサル防御。subst ルートでは .. はルートに丸められるが多層防御として明示検証する）
+function Test-WithinRoot {
+	param([string]$path)
+	try { $full = [System.IO.Path]::GetFullPath($path) } catch { return $false }
+	return $full.StartsWith($script:DriveRoot, [System.StringComparison]::OrdinalIgnoreCase)
+}
+
+# 静的配信して良いファイルか（config.json やスクリプトを配信させない）
+function Test-ServableFile {
+	param([string]$path)
+	$name = [System.IO.Path]::GetFileName($path).ToLower()
+	$ext = [System.IO.Path]::GetExtension($path).ToLower()
+	if ($script:SensitiveNames -contains $name) { return $false }
+	if ($script:BlockedExt -contains $ext) { return $false }
+	return $true
+}
+
 function Try-BindPort {
 	param([int]$port)
 	try {
@@ -68,9 +92,27 @@ function Serve-DirectoryHtml {
 function Serve-File {
 	param(
 		[System.Net.HttpListenerResponse]$res,
-		[string]$filePath
+		[string]$filePath,
+		[System.Net.HttpListenerRequest]$req = $null
 	)
 	try {
+		# 条件付きGET: Last-Modified を付与し、If-Modified-Since に合致すれば 304 を返す
+		$lastWrite = (Get-Item -LiteralPath $filePath).LastWriteTimeUtc
+		$res.Headers['Cache-Control'] = 'no-cache'
+		$res.Headers['Last-Modified'] = $lastWrite.ToString('r')
+		if ($req) {
+			$ims = $req.Headers['If-Modified-Since']
+			if (-not [string]::IsNullOrEmpty($ims)) {
+				$since = [datetime]::MinValue
+				if ([datetime]::TryParse($ims, [ref]$since)) {
+					if ($lastWrite -le $since.ToUniversalTime().AddSeconds(1)) {
+						$res.StatusCode = 304
+						$res.Close()
+						return
+					}
+				}
+			}
+		}
 		$bytes = [System.IO.File]::ReadAllBytes($filePath)
 		$res.ContentType = Get-ContentType -path $filePath
 		$res.ContentLength64 = $bytes.Length
@@ -104,12 +146,31 @@ if (Test-Path $configPath -PathType Leaf) {
 	}
 }
 
+# ソルト付き SHA-256（16進小文字）。config.json とツール生成側で同一アルゴリズムを使う。
+function Get-PasswordHash {
+	param([string]$salt, [string]$password)
+	$sha = [System.Security.Cryptography.SHA256]::Create()
+	try {
+		$bytes = [System.Text.Encoding]::UTF8.GetBytes("$salt`:$password")
+		return -join ($sha.ComputeHash($bytes) | ForEach-Object { $_.ToString('x2') })
+	} finally { $sha.Dispose() }
+}
+
 function Test-EditPassword {
 	param([System.Net.HttpListenerRequest]$req)
-	if (-not $script:EditConfig -or -not $script:EditConfig.editPassword) { return $false }
+	if (-not $script:EditConfig) { return $false }
 	$supplied = $req.Headers['X-Edit-Password']
 	if ([string]::IsNullOrEmpty($supplied)) { return $false }
-	return ($supplied -ceq [string]$script:EditConfig.editPassword)
+	# 推奨: ソルト付きハッシュ格納（平文をディスクに置かない）
+	if ($script:EditConfig.editPasswordHash -and $script:EditConfig.editPasswordSalt) {
+		$computed = Get-PasswordHash -salt ([string]$script:EditConfig.editPasswordSalt) -password $supplied
+		return ($computed -ceq [string]$script:EditConfig.editPasswordHash)
+	}
+	# 後方互換: 旧来の平文 editPassword（存在すれば）
+	if ($script:EditConfig.editPassword) {
+		return ($supplied -ceq [string]$script:EditConfig.editPassword)
+	}
+	return $false
 }
 
 # 安全なファイル名か検証する（Profile 配下の .md ファイル向け）。パス区切り・親ディレクトリ参照・先頭ドットを拒否する。
@@ -339,16 +400,23 @@ while ($listener.IsListening) {
 		} else {
 			$rawName = $req.Headers['X-File-Name']
 			$safeName = Get-SanitizedPhotoFileName -name $rawName
+			$pext = if ($safeName) { [System.IO.Path]::GetExtension($safeName).ToLower() } else { '' }
 			if (-not $safeName) {
 				Write-JsonResponse -res $res -statusCode 400 -obj @{ error = 'invalid or missing X-File-Name header' }
+			} elseif (-not ($script:PhotoExts -contains $pext)) {
+				Write-JsonResponse -res $res -statusCode 400 -obj @{ error = 'unsupported image type' }
 			} else {
 				try {
 					$bytes = Read-RequestBodyBytes -req $req
-					$photoDir = Join-Path "$Drive\" 'Profile\photo'
-					if (-not (Test-Path $photoDir)) { New-Item -ItemType Directory -Path $photoDir -Force | Out-Null }
-					$target = Join-Path $photoDir $safeName
-					[System.IO.File]::WriteAllBytes($target, $bytes)
-					Write-JsonResponse -res $res -statusCode 200 -obj @{ filename = $safeName }
+					if ($bytes.Length -gt $script:MaxPhotoBytes) {
+						Write-JsonResponse -res $res -statusCode 413 -obj @{ error = 'file too large' }
+					} else {
+						$photoDir = Join-Path "$Drive\" 'Profile\photo'
+						if (-not (Test-Path $photoDir)) { New-Item -ItemType Directory -Path $photoDir -Force | Out-Null }
+						$target = Join-Path $photoDir $safeName
+						[System.IO.File]::WriteAllBytes($target, $bytes)
+						Write-JsonResponse -res $res -statusCode 200 -obj @{ filename = $safeName }
+					}
 				} catch {
 					Write-JsonResponse -res $res -statusCode 500 -obj @{ error = $_.Exception.Message }
 				}
@@ -357,6 +425,13 @@ while ($listener.IsListening) {
 	}
 
 	if ($apiHandled) { continue }
+
+	# セキュリティ: ドライブ配下から外れる要求は拒否（パストラバーサル防御）
+	if (-not (Test-WithinRoot -path $fsPath)) {
+		$res.StatusCode = 403
+		$res.Close()
+		continue
+	}
 
 	# directory request: if index.html exists in the directory, serve it (avoid double-load from / and /index.html)
 	if ($rawPath.EndsWith('/') -or (Test-Path $fsPath -PathType Container)) {
@@ -368,7 +443,7 @@ while ($listener.IsListening) {
 		$indexFile = Join-Path $fsPath 'index.html'
 		if (Test-Path $indexFile -PathType Leaf) {
 			Write-Output "[$(Get-Date -Format o)] Serving index.html for directory $fsPath"
-			Serve-File -res $res -filePath $indexFile
+			Serve-File -res $res -filePath $indexFile -req $req
 			continue
 		}
 		Serve-DirectoryHtml -res $res -dirPath $fsPath -urlBase $rawPath
@@ -377,7 +452,13 @@ while ($listener.IsListening) {
 
 	# serve file if exists
 	if (Test-Path $fsPath -PathType Leaf) {
-		Serve-File -res $res -filePath $fsPath
+		# セキュリティ: config.json やスクリプト等は配信しない
+		if (-not (Test-ServableFile -path $fsPath)) {
+			$res.StatusCode = 403
+			$res.Close()
+			continue
+		}
+		Serve-File -res $res -filePath $fsPath -req $req
 		continue
 	}
 
