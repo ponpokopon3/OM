@@ -696,12 +696,12 @@
     props:['roots','tagStyle','pick'],
     computed:{
       layout(){
-        const W=210,H=54,IND=44,VGAP=12,OFF=22,GGAP=18; const boxes=[],paths=[]; let row=0,extra=0,prevKey=null;
+        const W=210,H=54,IND=44,VGAP=12,OFF=26,GGAP=24,XOFF=14; const boxes=[],paths=[]; let row=0,extra=0,prevKey=null;
         const gkey=n=> n._asg || (n.member && n.member.assignmentTop) || '';
         const sortKids=arr=> arr.slice().sort((a,b)=> gkey(a).localeCompare(gkey(b),'ja'));
         const place=(node,depth)=>{ const k=gkey(node);
           if(prevKey!==null && k!==prevKey) extra+=GGAP;
-          node._x=depth*(W+IND); node._y=row*(H+VGAP)+OFF+extra; row++; prevKey=k;
+          node._x=depth*(W+IND)+XOFF; node._y=row*(H+VGAP)+OFF+extra; row++; prevKey=k;
           boxes.push({key:node._id,node,x:node._x,y:node._y,w:W,h:H,gkey:k});
           sortKids(node.children).forEach(c=>place(c,depth+1)); };
         sortKids(this.roots||[]).forEach(r=>place(r,0));
@@ -716,7 +716,7 @@
         boxes.forEach(b=>{ const k=b.gkey;
           if(!k){ cur=null; return; }
           if(cur && cur.key===k) cur.boxes.push(b); else { cur={key:k,boxes:[b]}; runs.push(cur); } });
-        const PX=9,PT=16,PB=6;
+        const PX=10,PT=24,PB=6;
         return runs.filter(r=>r.boxes.length>=2).map((r,i)=>{
           const x=Math.max(0,Math.min(...r.boxes.map(b=>b.x))-PX), y=Math.max(0,Math.min(...r.boxes.map(b=>b.y))-PT);
           const w=Math.max(...r.boxes.map(b=>b.x+b.w))+PX-x, h=Math.max(...r.boxes.map(b=>b.y+b.h))+PB-y;
