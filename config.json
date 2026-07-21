@@ -1,1 +1,4 @@
-{ "editPassword": "orgadmin123" }
+{
+  "editPasswordSalt": "d459bc2f27381f8097790be5e1d910bf",
+  "editPasswordHash": "531cf573ad5df5a727c578051fef565d777ffc4f08b946fe6267311d6ea24f6f"
+}
